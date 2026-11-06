@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Zorofin</title>
+</head>
+<body>
+    <div id="ZorofinConfigPage" data-role="page" class="page type-interior pluginConfigurationPage zf-page">
+        <style>
+            #ZorofinConfigPage {
+                --zf-bg: #0b0f0d; --zf-panel: #141a17; --zf-raised: #1b231f; --zf-line: rgba(255,255,255,.08);
+                --zf-text: #f3f6f4; --zf-muted: #a9b5ad; --zf-faint: #6f7c74;
+                --zf-green: #42d779; --zf-green-strong: #25b85f; --zf-green-ink: #041208; --zf-green-soft: rgba(66,215,121,.14);
+                --zf-amber: #f2b84b; --zf-amber-soft: rgba(242,184,75,.14); --zf-red: #ff7a6b;
+                --zf-radius: 14px;
+            }
+            #ZorofinConfigPage .zf { box-sizing: border-box; max-width: 980px; margin: 0 auto; padding: 24px 16px 64px; color: var(--zf-text);
+                font-family: Inter, "SF Pro Text", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 15px; line-height: 1.45; }
+            #ZorofinConfigPage .zf *, #ZorofinConfigPage .zf *::before, #ZorofinConfigPage .zf *::after { box-sizing: border-box; }
+            #ZorofinConfigPage .zf-hero { display: flex; align-items: center; gap: 12px; padding: 8px 4px 0; }
+            #ZorofinConfigPage .zf-mark { width: 34px; height: 34px; flex: none; }
+            #ZorofinConfigPage .zf-hero h1 { margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -.01em; }
+            #ZorofinConfigPage .zf-hero #zfOverall { margin-left: auto; color: var(--zf-amber); font-size: 14px; font-weight: 600; }
+            #ZorofinConfigPage .zf-tabs { display: flex; gap: 26px; margin: 18px 0 24px; padding: 0 4px; border-bottom: 1px solid var(--zf-line);
+                overflow-x: auto; scrollbar-width: none; }
+            #ZorofinConfigPage .zf-tabs::-webkit-scrollbar { display: none; }
+            #ZorofinConfigPage .zf-tab { flex: none; position: relative; display: inline-flex; align-items: center; gap: 7px; padding: 12px 0 13px; border: 0;
+                background: transparent; color: var(--zf-muted); font: inherit; font-weight: 600; cursor: pointer; white-space: nowrap; }
+            #ZorofinConfigPage .zf-tab:hover { color: var(--zf-text); }
+            #ZorofinConfigPage .zf-tab[aria-selected="true"] { color: var(--zf-text); }
+            #ZorofinConfigPage .zf-tab[aria-selected="true"]::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; border-radius: 2px; background: var(--zf-green); }
+            #ZorofinConfigPage .zf-tab:focus-visible, #ZorofinConfigPage .zf button:focus-visible, #ZorofinConfigPage .zf input:focus-visible,
+            #ZorofinConfigPage .zf select:focus-visible { outline: 2px solid var(--zf-green); outline-offset: 2px; }
+            #ZorofinConfigPage .zf-step { width: 7px; height: 7px; border-radius: 50%; flex: none; background: transparent; }
+            #ZorofinConfigPage .zf-step:not(.ok):not(.warn) { display: none; }
+            #ZorofinConfigPage .zf-step.ok { background: var(--zf-green); }
+            #ZorofinConfigPage .zf-step.warn { background: var(--zf-amber); }
+            #ZorofinConfigPage .zf-panel-intro { margin: 0 4px 16px; }
+            #ZorofinConfigPage .zf-panel-intro h2 { margin: 0 0 4px; font-size: 20px; font-weight: 650; }
+            #ZorofinConfigPage .zf-panel-intro p { margin: 0; color: var(--zf-muted); max-width: 62ch; }
+            #ZorofinConfigPage .zf-card { background: var(--zf-panel); border-radius: var(--zf-radius); padding: 20px; margin-bottom: 12px; }
+            #ZorofinConfigPage .zf-card-head { display: flex; align-items: center; gap: 12px; }
+            #ZorofinConfigPage .zf-card-head h3 { margin: 0; font-size: 17px; font-weight: 650; }
+            #ZorofinConfigPage .zf-card-head p { margin: 2px 0 0; color: var(--zf-muted); font-size: 14px; }
+            #ZorofinConfigPage .zf-card-head > div { flex: 1; min-width: 0; }
+            #ZorofinConfigPage .zf-card-head > .zf-side { flex: none; display: flex; align-items: center; gap: 12px; }
+            #ZorofinConfigPage .zf-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 18px; margin-top: 18px; }
+            #ZorofinConfigPage .zf-fields[hidden] { display: none; }
+            #ZorofinConfigPage .zf-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+            #ZorofinConfigPage .zf-field.wide, #ZorofinConfigPage .zf-field.check { grid-column: 1 / -1; }
+            #ZorofinConfigPage .zf-field > label { font-weight: 600; font-size: 14px; }
+            #ZorofinConfigPage .zf-field input[type="text"], #ZorofinConfigPage .zf-field input[type="url"], #ZorofinConfigPage .zf-field input[type="password"],
+            #ZorofinConfigPage .zf-field input[type="number"], #ZorofinConfigPage .zf-field select {
+                width: 100%; height: 44px; padding: 0 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,.12); background: var(--zf-bg);
+                color: var(--zf-text); font: inherit; font-size: 15px; -webkit-appearance: none; appearance: none; }
+            #ZorofinConfigPage .zf-field select { background-image: linear-gradient(45deg, transparent 50%, var(--zf-muted) 50%), linear-gradient(135deg, var(--zf-muted) 50%, transparent 50%);
+                background-position: calc(100% - 20px) 19px, calc(100% - 15px) 19px; background-size: 5px 5px; background-repeat: no-repeat; padding-right: 36px; }
+            #ZorofinConfigPage .zf-field input:focus, #ZorofinConfigPage .zf-field select:focus { border-color: var(--zf-green); outline: none; box-shadow: 0 0 0 3px var(--zf-green-soft); }
+            #ZorofinConfigPage .zf-field input::placeholder { color: var(--zf-faint); }
+            #ZorofinConfigPage .zf-help { color: var(--zf-muted); font-size: 13px; }
+            #ZorofinConfigPage .zf-field textarea, #ZorofinConfigPage .zf-field input[type="datetime-local"] {
+                width: 100%; box-sizing: border-box; padding: 11px 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,.12); background: var(--zf-bg);
+                color: var(--zf-text); font: inherit; font-size: 15px; color-scheme: dark; }
+            #ZorofinConfigPage .zf-field input[type="datetime-local"] { height: 44px; padding-block: 0; }
+            #ZorofinConfigPage .zf-field textarea { min-height: 92px; resize: vertical; line-height: 1.45; }
+            #ZorofinConfigPage .zf-field textarea:focus, #ZorofinConfigPage .zf-field input[type="datetime-local"]:focus { border-color: var(--zf-green); outline: none; box-shadow: 0 0 0 3px var(--zf-green-soft); }
+            #ZorofinConfigPage .zf-count { margin-left: auto; color: var(--zf-faint); font-size: 12px; font-weight: 500; }
+            #ZorofinConfigPage .zf-preview { margin-top: 18px; padding: 28px 20px; border-radius: 12px; background: radial-gradient(120% 140% at 80% 0%, #3a2a22 0%, #101512 60%); }
+            #ZorofinConfigPage .zf-preview-label { margin: 18px 0 0; color: var(--zf-muted); font-size: 13px; font-weight: 600; }
+            #ZorofinConfigPage .zac { max-width: 560px; margin: 0 auto; padding: 22px 26px 24px; color: #f5f7f5; background: #171d19; border: 1px solid rgba(255,255,255,.12); border-radius: 24px; box-shadow: 0 24px 80px rgba(0,0,0,.4); box-sizing: border-box; }
+            #ZorofinConfigPage .zac-head { margin: 0 0 18px; font-size: 24px; font-weight: 650; letter-spacing: -.03em; }
+            #ZorofinConfigPage .zac-item { padding-top: 20px; border-top: 1px solid rgba(255,255,255,.08); }
+            #ZorofinConfigPage .zac-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+            #ZorofinConfigPage .zac-title { margin: 0; font-size: 16px; font-weight: 600; line-height: 1.4; overflow-wrap: anywhere; }
+            #ZorofinConfigPage .zac-message { margin: 8px 0 0; font-size: 15px; line-height: 1.6; color: #bbc8bf; white-space: pre-wrap; overflow-wrap: anywhere; }
+            #ZorofinConfigPage .zac-read { flex-shrink: 0; color: #b8d9c2; font-size: 13px; font-weight: 600; }
+            #ZorofinConfigPage .zac-action { display: inline-flex; align-items: center; min-height: 40px; margin-top: 14px; padding: 0 18px; border-radius: 999px; background: #f4f7f5; color: #101512; font-size: 14px; font-weight: 700; white-space: nowrap; }
+            #ZorofinConfigPage .zf-field[hidden] { display: none; }
+            #ZorofinConfigPage .zf-swatches { display: flex; flex-wrap: wrap; gap: 8px; }
+            #ZorofinConfigPage .zf-swatch { display: inline-flex; align-items: center; gap: 8px; height: 38px; padding: 0 14px 0 10px; border-radius: 10px;
+                border: 1px solid rgba(255,255,255,.1); background: var(--zf-bg); color: var(--zf-text); font: inherit; font-size: 14px; cursor: pointer; }
+            #ZorofinConfigPage .zf-swatch i { width: 18px; height: 18px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(255,255,255,.18); }
+            #ZorofinConfigPage .zf-swatch i.custom { background: conic-gradient(#ff5a5f, #f5a524, #42d779, #3d9cff, #9d7bff, #ff5a5f); }
+            #ZorofinConfigPage .zf-swatch[aria-checked="true"] { border-color: var(--zf-text); }
+            #ZorofinConfigPage .zf-color { width: 64px; height: 44px; padding: 4px; border-radius: 10px; border: 1px solid rgba(255,255,255,.12); background: var(--zf-bg); cursor: pointer; }
+            #ZorofinConfigPage .zf-image { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+            #ZorofinConfigPage .zf-image img { max-width: 200px; max-height: 56px; padding: 8px; border-radius: 10px; background: var(--zf-bg); object-fit: contain; }
+            #ZorofinConfigPage .zf-help a, #ZorofinConfigPage .zf-link { color: var(--zf-green); text-decoration: none; font-weight: 600; cursor: pointer; background: none; border: 0; padding: 0; font: inherit; font-size: 13px; }
+            #ZorofinConfigPage .zf-help a:hover, #ZorofinConfigPage .zf-link:hover { text-decoration: underline; }
+            #ZorofinConfigPage .zf-checkrow { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 14px;
+                border-radius: 10px; background: var(--zf-bg); }
+            #ZorofinConfigPage .zf-checkrow span { font-weight: 600; font-size: 14px; }
+            #ZorofinConfigPage .zf-switch { position: relative; flex: none; width: 52px; height: 30px; }
+            #ZorofinConfigPage .zf-switch input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; z-index: 1; }
+            #ZorofinConfigPage .zf-switch i { position: absolute; inset: 0; border-radius: 999px; background: #39423c; transition: background .15s; }
+            #ZorofinConfigPage .zf-switch i::after { content: ""; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: #fff; transition: transform .15s; box-shadow: 0 1px 3px rgba(0,0,0,.4); }
+            #ZorofinConfigPage .zf-switch input:checked + i { background: var(--zf-green-strong); }
+            #ZorofinConfigPage .zf-switch input:checked + i::after { transform: translateX(22px); }
+            #ZorofinConfigPage .zf-switch input:disabled { cursor: not-allowed; }
+            #ZorofinConfigPage .zf-switch input:disabled + i { opacity: .45; }
+            #ZorofinConfigPage .zf-switch input:focus-visible + i { outline: 2px solid var(--zf-green); outline-offset: 2px; }
+            #ZorofinConfigPage .zf-chip { font-size: 13px; font-weight: 600; color: var(--zf-faint); white-space: nowrap; }
+            #ZorofinConfigPage .zf-chip.ok { color: var(--zf-green); }
+            #ZorofinConfigPage .zf-chip.warn { color: var(--zf-amber); }
+            #ZorofinConfigPage .zf-notice { display: flex; align-items: center; gap: 12px; padding: 14px 16px; margin-top: 14px; border-radius: 14px;
+                background: var(--zf-amber-soft); color: #fbe3b3; font-size: 14px; }
+            #ZorofinConfigPage .zf-notice.info { background: var(--zf-green-soft); color: #c9f5d8; }
+            #ZorofinConfigPage .zf-notice .zf-btn { margin-left: auto; }
+            #ZorofinConfigPage .zf-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 6px; padding: 16px 0 0; }
+            #ZorofinConfigPage .zf-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 42px; padding: 0 20px; border-radius: 10px;
+                border: 1px solid rgba(255,255,255,.14); background: transparent; color: var(--zf-text); font: inherit; font-weight: 650; cursor: pointer; }
+            #ZorofinConfigPage .zf-btn:hover:not(:disabled) { background: rgba(255,255,255,.06); }
+            #ZorofinConfigPage .zf-btn.primary { background: var(--zf-green-strong); border-color: var(--zf-green-strong); color: var(--zf-green-ink); }
+            #ZorofinConfigPage .zf-btn.primary:hover:not(:disabled) { background: var(--zf-green); }
+            #ZorofinConfigPage .zf-btn.small { height: 34px; padding: 0 14px; font-size: 13px; }
+            #ZorofinConfigPage .zf-btn:disabled { opacity: .5; cursor: progress; }
+            #ZorofinConfigPage .zf-result { flex-basis: 100%; margin: 4px 0 0; padding: 0; list-style: none; font-size: 14px; }
+            #ZorofinConfigPage .zf-result li { display: flex; gap: 8px; padding: 3px 0; color: var(--zf-muted); }
+            #ZorofinConfigPage .zf-result li.ok::before { content: "✓"; color: var(--zf-green); font-weight: 800; }
+            #ZorofinConfigPage .zf-result li.bad { color: #ffd2cc; }
+            #ZorofinConfigPage .zf-result li.bad::before { content: "✕"; color: var(--zf-red); font-weight: 800; }
+            #ZorofinConfigPage .zf-result li.busy::before { content: "…"; }
+            #ZorofinConfigPage .zf-steps { background: var(--zf-panel); border-radius: var(--zf-radius); overflow: hidden; }
+            #ZorofinConfigPage .zf-steprow { display: flex; align-items: center; gap: 14px; padding: 14px 18px; }
+            #ZorofinConfigPage .zf-steps .zf-steprow + .zf-steprow { border-top: 1px solid var(--zf-line); }
+            #ZorofinConfigPage .zf-steprow > div { flex: 1; min-width: 0; }
+            #ZorofinConfigPage .zf-steprow strong { display: block; font-size: 15px; }
+            #ZorofinConfigPage .zf-steprow small { color: var(--zf-muted); font-size: 13px; }
+            #ZorofinConfigPage .zf-next { margin-bottom: 12px; padding: 14px 18px; border-radius: var(--zf-radius); background: var(--zf-raised); }
+            #ZorofinConfigPage .zf-loading { padding: 48px 0; text-align: center; color: var(--zf-muted); }
+            @media (max-width: 640px) {
+                #ZorofinConfigPage .zf { padding: 12px 12px 48px; }
+                #ZorofinConfigPage .zf-hero h1 { font-size: 22px; }
+                #ZorofinConfigPage .zf-tabs { gap: 20px; }
+                #ZorofinConfigPage .zf-fields { grid-template-columns: 1fr; }
+                #ZorofinConfigPage .zf-card { padding: 16px; }
+                #ZorofinConfigPage .zf-card-head { flex-wrap: wrap; }
+                #ZorofinConfigPage .zf-actions .zf-btn { flex: 1; }
+            }
+        </style>
+        <div data-role="content">
+            <div class="content-primary zf">
+                <header class="zf-hero">
+                    <img class="zf-mark" alt="" src="data:image/png;base64,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">
+                    <h1>Zorofin</h1>
+                    <span id="zfOverall"></span>
+                </header>
+                <nav class="zf-tabs" role="tablist" aria-label="Setup steps"></nav>
+                <div class="zf-panels"><div class="zf-loading">Loading your settings…</div></div>
+            </div>
+        </div>
+        <script type="text/javascript">
+            (function () {
+                var pluginId = 'e49272bf-d1f8-4d83-8cd4-7b3c7f2a1fce';
+                var settingsUrl = 'Zorofin/Admin/Companion/Settings';
+                var page = document.querySelector('#ZorofinConfigPage');
+                var tabsEl = page.querySelector('.zf-tabs');
+                var panelsEl = page.querySelector('.zf-panels');
+                var state = { plugin: null, companion: null, link: 'notset', tab: 'overview' };
+
+                // Setup steps in order. "section" names the companion part a step manages.
+                var STEPS = [
+                    { id: 'overview', title: 'Overview' },
+                    { id: 'connect', title: 'Connect', summary: 'Your companion and Seerr.', heading: 'Connect your services', intro: 'Tell Zorofin where your companion and Seerr live. Every other step uses these.' },
+                    { id: 'requests', title: 'Requests', summary: 'Browse and request from the apps.', heading: 'Requests', intro: 'Viewers browse and request movies and shows from the Zorofin apps. Seerr\'s own permissions, quotas and approvals still apply.' },
+                    { id: 'alerts', title: 'Alerts', section: 'notifications', summary: 'Email or push when a request is ready.', heading: 'Request alerts' },
+                    { id: 'livetv', title: 'Live TV', section: 'liveTvGuide', summary: 'A better guide, with artwork and logos.', heading: 'Live TV guide' },
+                    { id: 'foryou', title: 'For you', section: 'recommendations', summary: 'Recommended to request, and Popular this week.', heading: 'For you', intro: 'Rows on Home that help viewers find something to watch.' },
+                    { id: 'home', title: 'Home', summary: 'Zorofin Home rows, in place of Home Screen Sections.', heading: 'Home', intro: 'Zorofin builds every Home row for each viewer: Continue Watching, their requests, rows picked for them and your library shelves. Empty rows stay hidden. The web client shows them with the Zorofin look on; the apps will use them in a later update.' },
+                    { id: 'announce', title: 'Announcement', summary: 'A message in everyone\'s Notifications.', heading: 'Announcement', intro: 'A short message for everyone on this server. It shows in Notifications in the web client now, and in the Zorofin apps once they support it.' },
+                    { id: 'look', title: 'Look & player', section: 'webUi', summary: 'The Zorofin look in Jellyfin\'s web client.', heading: 'Look and player', intro: 'Give Jellyfin\'s own web client the Zorofin look and the Zorofin player. Viewers reload their browser tab to see a change.' }
+                ];
+
+                function el(tag, className, text) {
+                    var node = document.createElement(tag);
+                    if (className) node.className = className;
+                    if (text !== undefined && text !== null) node.textContent = text;
+                    return node;
+                }
+                function add(parent) { for (var i = 1; i < arguments.length; i++) if (arguments[i]) parent.appendChild(arguments[i]); return parent; }
+                function request(type, path, body) {
+                    return ApiClient.ajax({
+                        type: type, url: ApiClient.getUrl(path), dataType: 'json',
+                        contentType: body ? 'application/json' : undefined, data: body ? JSON.stringify(body) : undefined
+                    });
+                }
+                function failure(error) {
+                    if (error && typeof error.json === 'function') {
+                        return error.json().then(function (b) { return (b && b.error) || ('Error ' + error.status); }, function () { return 'Error ' + error.status; });
+                    }
+                    return Promise.resolve('The companion did not answer.');
+                }
+                function section(id) {
+                    var list = (state.companion && state.companion.sections) || [];
+                    for (var i = 0; i < list.length; i++) if (list[i].id === id) return list[i];
+                    return null;
+                }
+                function optionOf(sectionId, key) {
+                    var s = section(sectionId);
+                    if (!s) return null;
+                    for (var i = 0; i < s.options.length; i++) if (s.options[i].key === key) return s.options[i];
+                    return null;
+                }
+                function seerrReady() { return !!(state.plugin.SeerrUrl && state.plugin.SeerrApiKey); }
+
+                // ---- Status of each step, for the tab marks and the overview ----
+                function moduleStatus(s) {
+                    if (state.link !== 'ok') return { kind: 'off', text: 'Needs the companion' };
+                    if (!s) return { kind: 'off', text: 'Not in this companion' };
+                    if (s.enabled && s.error) return { kind: 'warn', text: 'Needs attention' };
+                    if (s.running) return { kind: 'ok', text: 'On' };
+                    if (s.enabled) return { kind: 'warn', text: 'Starting' };
+                    return { kind: 'off', text: 'Off' };
+                }
+                function status(step) {
+                    var p = state.plugin;
+                    switch (step.id) {
+                        case 'connect':
+                            if (state.link === 'ok') return { kind: 'ok', text: 'Connected' };
+                            if (state.link === 'unreachable') return { kind: 'warn', text: 'Companion not reachable' };
+                            return seerrReady() ? { kind: 'ok', text: 'Seerr connected' } : { kind: 'todo', text: 'Start here' };
+                        case 'requests':
+                            if (!p.RequestsEnabled) return { kind: 'off', text: 'Off' };
+                            return seerrReady() ? { kind: 'ok', text: 'On' } : { kind: 'warn', text: 'Needs Seerr' };
+                        case 'foryou':
+                            var recs = moduleStatus(section('recommendations'));
+                            if (recs.kind === 'off' && p.PlayStatsEnabled) return { kind: 'ok', text: 'Popular this week on' };
+                            return recs;
+                        case 'home':
+                            return p.HomeRowsEnabled ? { kind: 'ok', text: 'On' } : { kind: 'off', text: 'Off' };
+                        case 'announce':
+                            return announcementStatus(p);
+                        case 'look':
+                            if (!p.WebUiEnabled) return { kind: 'off', text: 'Off' };
+                            var look = moduleStatus(section('webUi'));
+                            return look.kind === 'ok' ? look : { kind: 'warn', text: state.link === 'ok' ? 'Needs the web look turned on' : 'Needs the companion' };
+                        default:
+                            return moduleStatus(section(step.section));
+                    }
+                }
+                function stepMark(kind) {
+                    var mark = el('span', 'zf-step ' + kind);
+                    mark.setAttribute('aria-hidden', 'true');
+                    return mark;
+                }
+                function chip(s) { return el('span', 'zf-chip ' + (s.kind === 'ok' ? 'ok' : s.kind === 'warn' ? 'warn' : ''), s.text); }
+
+                // ---- Fields ----
+                // An option is { key, type, label, help, placeholder, value, set, source, choices, min, max }.
+                function field(option, onChange) {
+                    var id = 'zf-' + option.key + '-' + Math.random().toString(36).slice(2, 7);
+                    var wrap = el('div', 'zf-field'), input;
+                    if (option.type === 'boolean') {
+                        wrap.className = 'zf-field check';
+                        var row = el('label', 'zf-checkrow');
+                        input = toggle(!!option.value);
+                        add(row, el('span', null, option.label), input.wrap);
+                        input = input.input;
+                        wrap.appendChild(row);
+                    } else {
+                        var label = el('label', null, option.label); label.htmlFor = id;
+                        wrap.appendChild(label);
+                        if (option.type === 'choice') {
+                            input = el('select');
+                            (option.choices || []).forEach(function (c) { var o = el('option', null, c.label); o.value = c.value; input.appendChild(o); });
+                            input.value = option.value;
+                            if (option.display === 'swatches') { wrap.classList.add('wide'); input.hidden = true; wrap.appendChild(swatches(option, input)); }
+                        } else if (option.type === 'color') {
+                            input = el('input'); input.type = 'color'; input.value = option.value || '#42d779';
+                            input.className = 'zf-color';
+                        } else if (option.type === 'image') {
+                            input = imagePicker(option, wrap);
+                        } else if (option.type === 'textarea') {
+                            input = el('textarea'); input.rows = 3; input.value = option.value || '';
+                            if (option.placeholder) input.placeholder = option.placeholder;
+                        } else if (option.type === 'datetime') {
+                            input = el('input'); input.type = 'datetime-local'; input.value = toLocalInput(option.value);
+                        } else {
+                            input = el('input');
+                            input.type = option.type === 'secret' ? 'password' : option.type === 'number' ? 'number' : option.type === 'url' ? 'url' : 'text';
+                            input.spellcheck = false;
+                            if (option.type === 'secret') { input.autocomplete = 'new-password'; input.placeholder = option.set ? 'Saved. Type to replace.' : 'Not set'; }
+                            else {
+                                input.value = option.type === 'list' ? (option.value || []).join(', ') : (option.value === undefined || option.value === null ? '' : option.value);
+                                if (option.placeholder) input.placeholder = option.placeholder;
+                                if (option.min !== undefined) { input.min = option.min; input.max = option.max; }
+                            }
+                        }
+                        if (option.type !== 'image') { input.id = id; wrap.appendChild(input); }
+                    }
+                    if (option.wide || option.type === 'color' || option.type === 'image' || option.type === 'textarea') wrap.classList.add('wide');
+                    if (option.maxLength) {
+                        input.maxLength = option.maxLength;
+                        var count = el('span', 'zf-count');
+                        var countNow = function () { count.textContent = input.value.length + ' / ' + option.maxLength; };
+                        input.addEventListener('input', countNow); countNow();
+                        if (wrap.firstChild && wrap.firstChild.tagName === 'LABEL') { wrap.firstChild.style.display = 'flex'; wrap.firstChild.appendChild(count); }
+                    }
+                    var notes = [];
+                    if (option.help) notes.push(option.help);
+                    if (option.source === 'environment') notes.push('Set on the container.');
+                    var help = el('div', 'zf-help', notes.join(' '));
+                    var item = { option: option, wrap: wrap, input: input, reset: false };
+                    if (option.source === 'dashboard') {
+                        var reset = el('a', null, option.type === 'secret' ? 'Remove saved key' : 'Use the container\'s value');
+                        reset.href = '#';
+                        if (notes.length) help.appendChild(document.createTextNode(' '));
+                        reset.addEventListener('click', function (e) { e.preventDefault(); item.reset = true; reset.textContent = 'Will reset when saved'; });
+                        help.appendChild(reset);
+                    }
+                    if (help.textContent) wrap.appendChild(help);
+                    if (onChange) input.addEventListener(option.type === 'boolean' || option.type === 'choice' ? 'change' : 'input', onChange);
+                    return item;
+                }
+                function toggle(checked, labelText) {
+                    var wrap = el('span', 'zf-switch'), input = el('input');
+                    input.type = 'checkbox'; input.checked = checked; input.setAttribute('role', 'switch');
+                    if (labelText) input.setAttribute('aria-label', labelText);
+                    add(wrap, input, el('i'));
+                    return { wrap: wrap, input: input };
+                }
+                // Presets as colour dots; the hidden select keeps the value.
+                function swatches(option, select) {
+                    var row = el('div', 'zf-swatches');
+                    row.setAttribute('role', 'radiogroup'); row.setAttribute('aria-label', option.label);
+                    function mark() { row.querySelectorAll('button').forEach(function (b) { b.setAttribute('aria-checked', String(b.dataset.value === select.value)); }); }
+                    (option.choices || []).forEach(function (c) {
+                        var b = el('button', 'zf-swatch'); b.type = 'button'; b.dataset.value = c.value;
+                        b.setAttribute('role', 'radio');
+                        var dot = el('i'); if (c.color) dot.style.background = c.color; else dot.className = 'custom';
+                        add(b, dot, el('span', null, c.label));
+                        b.addEventListener('click', function () { select.value = c.value; mark(); select.dispatchEvent(new Event('change')); });
+                        row.appendChild(b);
+                    });
+                    mark();
+                    return row;
+                }
+                // An image upload with a preview. The chosen file is read as a data: URL and sent on Save.
+                function imagePicker(option, wrap) {
+                    var holder = { value: '', data: null, type: 'image' };
+                    var box = el('div', 'zf-image'), preview = el('img'), file = el('input'), pick = el('button', 'zf-btn small', option.set ? 'Replace' : 'Choose image');
+                    preview.alt = ''; preview.hidden = true;
+                    preview.addEventListener('error', function () { preview.hidden = true; });
+                    if (option.set && option.slot) { preview.src = ApiClient.getUrl('Zorofin/Web/ui/' + option.slot) + '?t=' + Date.now(); preview.hidden = false; }
+                    file.type = 'file'; file.accept = 'image/png,image/jpeg,image/webp'; file.hidden = true;
+                    pick.type = 'button';
+                    pick.addEventListener('click', function () { file.click(); });
+                    var note = el('span', 'zf-help');
+                    file.addEventListener('change', function () {
+                        var f = file.files && file.files[0];
+                        if (!f) return;
+                        if (!/^image\/(png|jpeg|webp)$/.test(f.type)) { note.textContent = 'Use a PNG, JPEG or WebP image.'; return; }
+                        if (f.size > 1024 * 1024) { note.textContent = 'That image is over 1 MB.'; return; }
+                        var reader = new FileReader();
+                        reader.onload = function () { holder.data = reader.result; preview.src = reader.result; preview.hidden = false; note.textContent = f.name; pick.textContent = 'Replace'; };
+                        reader.readAsDataURL(f);
+                    });
+                    add(box, preview, pick, file, note);
+                    holder.box = box;
+                    holder.addEventListener = function () {};
+                    wrap.appendChild(box);
+                    return holder;
+                }
+                // Shows a field only while another field has a given value, such as the accent for Custom colours.
+                function applyWhen(items) {
+                    items.forEach(function (item) {
+                        var rule = item.option.when;
+                        if (!rule) return;
+                        var other = items.filter(function (x) { return x.option.key === rule.key; })[0];
+                        if (!other) return;
+                        function update() { item.wrap.hidden = String(valueOf(other)) !== String(rule.value); }
+                        other.input.addEventListener('change', update);
+                        update();
+                    });
+                }
+                // The value a field would save, or undefined when it should be left as it is.
+                function valueOf(item) {
+                    var o = item.option, i = item.input;
+                    if (item.reset) return null;
+                    if (o.type === 'boolean') return i.checked;
+                    if (o.type === 'secret') return i.value ? i.value : undefined;
+                    if (o.type === 'image') return i.data || undefined;
+                    if (o.type === 'color') return i.value.toLowerCase();
+                    if (o.type === 'datetime') return fromLocalInput(i.value);
+                    if (o.type === 'number') return i.value === '' ? undefined : Number(i.value);
+                    if (o.type === 'list') return i.value.split(',').map(function (x) { return x.trim(); }).filter(Boolean);
+                    return i.value.trim();
+                }
+                function same(a, b) { return JSON.stringify(a === undefined ? null : a) === JSON.stringify(b === undefined ? null : b); }
+                // Companion values that changed, so container settings stay where they are unless edited.
+                function changedValues(items) {
+                    var values = {};
+                    items.forEach(function (item) {
+                        var v = valueOf(item);
+                        if (v === undefined) return;
+                        if (v !== null && item.option.type !== 'secret' && item.option.type !== 'image' && same(v, item.option.value === undefined ? (item.option.type === 'list' ? [] : item.option.type === 'boolean' ? false : '') : item.option.value)) return;
+                        values[item.option.key] = v;
+                    });
+                    return values;
+                }
+
+                // ---- Building blocks ----
+                function card(title, description, extra) {
+                    var box = el('section', 'zf-card'), head = el('div', 'zf-card-head'), text = el('div');
+                    add(text, el('h3', null, title), description ? el('p', null, description) : null);
+                    if (extra && !extra.classList.contains('zf-side')) { var side = el('div', 'zf-side'); side.appendChild(extra); extra = side; }
+                    add(head, text, extra);
+                    box.appendChild(head);
+                    return box;
+                }
+                function fieldsBox(items) {
+                    var box = el('div', 'zf-fields');
+                    items.forEach(function (item) { box.appendChild(item.wrap); });
+                    return box;
+                }
+                function notice(text, kind, buttonText, target) {
+                    var box = el('div', 'zf-notice' + (kind ? ' ' + kind : ''));
+                    box.appendChild(el('span', null, text));
+                    if (buttonText) {
+                        var b = el('button', 'zf-btn small', buttonText); b.type = 'button';
+                        b.addEventListener('click', function () { show(target); });
+                        box.appendChild(b);
+                    }
+                    return box;
+                }
+                function companionMissing() {
+                    return notice(state.link === 'unreachable'
+                        ? 'The companion isn\'t answering. Check its address and secret in Connect.'
+                        : 'This step runs on the Zorofin companion. Add it in Connect first.', null, 'Go to Connect', 'connect');
+                }
+                // A companion module as a card: switch, status and its settings, hidden while off.
+                function moduleCard(s, title) {
+                    var st = moduleStatus(s);
+                    var sw = toggle(!!s.enabled, 'Turn on ' + (title || s.title));
+                    var head = el('div', 'zf-side');
+                    add(head, chip(st), sw.wrap);
+                    var box = card(title || s.title, s.description, head);
+                    box.dataset.section = s.id;
+                    var items = s.options.map(function (o) { return field(o); });
+                    applyWhen(items);
+                    var fields = fieldsBox(items);
+                    fields.hidden = !sw.input.checked;
+                    sw.input.addEventListener('change', function () { fields.hidden = !sw.input.checked; });
+                    if (s.enabled && s.error) box.appendChild(notice(s.error));
+                    if (items.length) box.appendChild(fields);
+                    return { box: box, toggle: sw.input, items: items, section: s };
+                }
+                function companionChange(m) {
+                    var body = { values: changedValues(m.items) };
+                    if (m.toggle && m.section.kind === 'module') body.enabled = m.toggle.checked;
+                    return body;
+                }
+
+                // ---- Saving and testing ----
+                function savePlugin(changes) {
+                    if (!Object.keys(changes).length) return Promise.resolve(false);
+                    return ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+                        Object.keys(changes).forEach(function (k) { config[k] = changes[k]; });
+                        return ApiClient.updatePluginConfiguration(pluginId, config).then(function () { return true; });
+                    });
+                }
+                function actions(panel, plan) {
+                    var bar = el('div', 'zf-actions'), result = el('ul', 'zf-result');
+                    result.setAttribute('aria-live', 'polite');
+                    function lines(list) { result.textContent = ''; list.forEach(function (l) { result.appendChild(el('li', l[0], l[1])); }); }
+                    function busy(button, run) {
+                        return function () {
+                            var all = bar.querySelectorAll('button');
+                            all.forEach(function (b) { b.disabled = true; });
+                            run().then(done, done);
+                            function done() { all.forEach(function (b) { b.disabled = false; }); }
+                        };
+                    }
+                    if (plan.test) {
+                        var test = el('button', 'zf-btn', 'Test'); test.type = 'button';
+                        test.addEventListener('click', busy(test, function () {
+                            lines([['busy', 'Checking…']]);
+                            return plan.test().then(lines);
+                        }));
+                        bar.appendChild(test);
+                    }
+                    var save = el('button', 'zf-btn primary', 'Save'); save.type = 'button';
+                    save.addEventListener('click', busy(save, function () {
+                        lines([['busy', 'Saving…']]);
+                        var work;
+                        try { work = plan.collect(); } catch (e) { lines([['bad', e.message]]); return Promise.resolve(); }
+                        var errors = [];
+                        return savePlugin(work.plugin || {}).then(function (pluginChanged) {
+                            // New companion details take effect before its own settings are sent.
+                            return pluginChanged && work.reloadFirst ? load(true) : null;
+                        }).then(function () {
+                            var parts = (work.companion || []).filter(function (c) { return !c.when || c.when(); });
+                            return parts.reduce(function (chain, c) {
+                                return chain.then(function () {
+                                    var body = typeof c.body === 'function' ? c.body() : c.body;
+                                    if (!body) return null;
+                                    return request('POST', settingsUrl + '/' + c.id, body).catch(function (e) {
+                                        return failure(e).then(function (m) { errors.push(m); });
+                                    });
+                                });
+                            }, Promise.resolve());
+                        }).then(function () {
+                            return load(true);
+                        }).then(function () {
+                            render();
+                            var after = panelsEl.querySelector('.zf-result');
+                            var keep = errors.length ? errors.map(function (m) { return ['bad', m]; }) : [['ok', 'Saved.']];
+                            if (after) { after.textContent = ''; keep.forEach(function (l) { after.appendChild(el('li', l[0], l[1])); }); }
+                        }, function () {
+                            lines([['bad', 'Couldn\'t save. Check your connection to Jellyfin and try again.']]);
+                        });
+                    }));
+                    bar.appendChild(save);
+                    bar.appendChild(result);
+                    panel.appendChild(bar);
+                }
+                function testSection(id, body) {
+                    return request('POST', settingsUrl + '/' + id + '/Test', body).then(function (r) {
+                        var list = (r.checks || []).map(function (c) { return [c.ok ? 'ok' : 'bad', c.label + ': ' + c.detail]; });
+                        return list.length ? list : [['ok', 'Nothing to check.']];
+                    }, function (e) { return failure(e).then(function (m) { return [['bad', m]]; }); });
+                }
+
+                // ---- Panels ----
+                function overviewPanel(panel) {
+                    var steps = STEPS.filter(function (s) { return s.id !== 'overview'; });
+                    var next = steps.filter(function (s) { var k = status(s).kind; return k === 'todo' || k === 'warn'; })[0];
+                    if (next) {
+                        var n = el('div', 'zf-steprow zf-next');
+                        var t = el('div');
+                        add(t, el('strong', null, next.id === 'connect' && status(next).kind === 'todo' ? 'Start with Connect' : 'Next: ' + next.title),
+                            el('small', null, status(next).text));
+                        var go = el('button', 'zf-btn small', 'Open'); go.type = 'button';
+                        go.addEventListener('click', function () { show(next.id); });
+                        add(n, stepMark(status(next).kind), t, go);
+                        panel.appendChild(n);
+                    }
+                    var list = el('div', 'zf-steps');
+                    steps.forEach(function (s) {
+                        var st = status(s), row = el('div', 'zf-steprow'), text = el('div');
+                        row.dataset.step = s.id;
+                        add(text, el('strong', null, s.heading || s.title), el('small', null, s.summary || ''));
+                        var open = el('button', 'zf-btn small', st.kind === 'ok' ? 'Edit' : 'Set up'); open.type = 'button';
+                        open.addEventListener('click', function () { show(s.id); });
+                        add(row, stepMark(st.kind), text, chip(st), open);
+                        list.appendChild(row);
+                    });
+                    panel.appendChild(list);
+                }
+
+                function connectPanel(panel) {
+                    var p = state.plugin, items = {};
+                    // Companion
+                    var linkChip = chip(state.link === 'ok' ? { kind: 'ok', text: 'Connected' } : state.link === 'unreachable' ? { kind: 'warn', text: 'Not reachable' } : { kind: 'off', text: 'Not added' });
+                    var comp = card('Zorofin companion', 'Optional. Runs alerts, Live TV, recommendations and the web look. Leave empty if you don\'t run it.', linkChip);
+                    comp.dataset.section = 'companion';
+                    items.companionUrl = field({ key: 'CompanionUrl', type: 'url', label: 'Companion address', placeholder: 'http://zorofin-companion:9310', value: p.CompanionUrl, help: 'How Jellyfin reaches the companion.' });
+                    items.companionSecret = field({ key: 'CompanionSecret', type: 'secret', label: 'Companion secret', set: !!p.CompanionSecret, help: 'Same as the companion\'s ZOROFIN_BRIDGE_SECRET.' });
+                    comp.appendChild(fieldsBox([items.companionUrl, items.companionSecret]));
+                    panel.appendChild(comp);
+
+                    // Seerr, shared by Requests here and by the companion.
+                    var seerr = card('Seerr', 'Where requests go. Used by Requests, alerts and recommendations.', chip(seerrReady() ? { kind: 'ok', text: 'Saved' } : { kind: 'off', text: 'Not set' }));
+                    seerr.dataset.section = 'seerr';
+                    var cSeerrUrl = optionOf('connections', 'seerrUrl'), cSeerrKey = optionOf('connections', 'seerrApiKey');
+                    items.seerrUrl = field({ key: 'SeerrUrl', type: 'url', label: 'Seerr address', placeholder: 'http://seerr:5055', value: p.SeerrUrl || (cSeerrUrl && cSeerrUrl.value) || '', help: 'How your server reaches Seerr.' });
+                    items.seerrKey = field({ key: 'SeerrApiKey', type: 'secret', label: 'Seerr API key', set: !!p.SeerrApiKey, help: 'Seerr → Settings → General. Stays on your server.' });
+                    seerr.appendChild(fieldsBox([items.seerrUrl, items.seerrKey]));
+                    if (cSeerrKey && cSeerrKey.set && !p.SeerrApiKey) seerr.appendChild(notice('The companion has a Seerr key but Requests doesn\'t yet. Type the key once here to use it for both.', 'info'));
+                    panel.appendChild(seerr);
+
+                    // Server details the companion uses.
+                    var conn = section('connections'), connItems = [];
+                    if (conn) {
+                        var server = card('Your server', 'How the companion reaches Jellyfin, and what viewers see in emails and alerts.');
+                        server.dataset.section = 'connections';
+                        connItems = conn.options.filter(function (o) { return o.key !== 'seerrUrl' && o.key !== 'seerrApiKey'; }).map(function (o) { return field(o); });
+                        server.appendChild(fieldsBox(connItems));
+                        panel.appendChild(server);
+                    } else if (state.link === 'unreachable') {
+                        panel.appendChild(notice('Jellyfin can\'t reach the companion at this address with this secret. Check both, then save.'));
+                    }
+
+                    actions(panel, {
+                        test: conn ? function () {
+                            return testSection('connections', connectionsBody());
+                        } : null,
+                        collect: function () {
+                            var plugin = {}, url = valueOf(items.companionUrl), secret = valueOf(items.companionSecret);
+                            if (url !== (p.CompanionUrl || '')) plugin.CompanionUrl = url;
+                            if (secret !== undefined) plugin.CompanionSecret = secret || '';
+                            if (items.companionSecret.reset) plugin.CompanionSecret = '';
+                            var su = valueOf(items.seerrUrl), sk = valueOf(items.seerrKey);
+                            if (su !== (p.SeerrUrl || '')) plugin.SeerrUrl = su;
+                            if (sk) plugin.SeerrApiKey = sk;
+                            return {
+                                plugin: plugin,
+                                reloadFirst: 'CompanionUrl' in plugin || 'CompanionSecret' in plugin,
+                                companion: [{ id: 'connections', when: function () { return state.link === 'ok'; }, body: connectionsBody }]
+                            };
+                        }
+                    });
+
+                    function connectionsBody() {
+                        var body = { values: changedValues(connItems) };
+                        var su = valueOf(items.seerrUrl), sk = valueOf(items.seerrKey);
+                        var cu = optionOf('connections', 'seerrUrl'), ck = optionOf('connections', 'seerrApiKey');
+                        if (cu && su !== (cu.value || '')) body.values.seerrUrl = su;
+                        if (ck && sk) body.values.seerrApiKey = sk;
+                        else if (ck && !ck.set && state.plugin.SeerrApiKey) body.values.seerrApiKey = state.plugin.SeerrApiKey;
+                        return body;
+                    }
+                }
+
+                function requestsPanel(panel) {
+                    var p = state.plugin;
+                    var sw = toggle(!!p.RequestsEnabled, 'Turn on Requests');
+                    var head = el('div', 'zf-side');
+                    add(head, chip(status(STEPS[2])), sw.wrap);
+                    var box = card('Requests in the apps', 'Viewers sign in to Seerr as themselves. Import your Jellyfin users into Seerr first.', head);
+                    box.dataset.section = 'requests';
+                    var items = [
+                        field({ key: 'RadarrUrl', type: 'url', label: 'Radarr address', placeholder: 'http://radarr:7878', value: p.RadarrUrl, help: 'Optional. Shows download progress for requested movies.' }),
+                        field({ key: 'RadarrApiKey', type: 'secret', label: 'Radarr API key', set: !!p.RadarrApiKey }),
+                        field({ key: 'SonarrUrl', type: 'url', label: 'Sonarr address', placeholder: 'http://sonarr:8989', value: p.SonarrUrl, help: 'Optional. Shows download progress for requested episodes.' }),
+                        field({ key: 'SonarrApiKey', type: 'secret', label: 'Sonarr API key', set: !!p.SonarrApiKey })
+                    ];
+                    var fields = fieldsBox(items);
+                    fields.hidden = !sw.input.checked;
+                    sw.input.addEventListener('change', function () { fields.hidden = !sw.input.checked; });
+                    if (!seerrReady()) box.appendChild(notice('Requests needs your Seerr address and key.', null, 'Add Seerr', 'connect'));
+                    box.appendChild(fields);
+                    panel.appendChild(box);
+                    // Jobs that keep Seerr in step with the library. They need Seerr, not the Requests switch.
+                    var jobs = [
+                        field({ key: 'AutoSeasonRequestsEnabled', type: 'boolean', label: 'Request the next season when a viewer nears the end', value: p.AutoSeasonRequestsEnabled }),
+                        field({ key: 'AutoSeasonEpisodesLeft', type: 'number', label: 'Episodes left when it asks', value: p.AutoSeasonEpisodesLeft == null ? 2 : p.AutoSeasonEpisodesLeft, min: 0, max: 10,
+                            help: 'Only for the newest season on the server. Requested as the viewer, so their Seerr quota and approvals apply.' }),
+                        field({ key: 'SeerrScanOnLibraryAdd', type: 'boolean', label: 'Tell Seerr when new movies and episodes arrive', value: p.SeerrScanOnLibraryAdd,
+                            help: 'Runs Seerr\'s recently-added scan once a batch finishes, so requests show as available right away.' })
+                    ];
+                    var auto = card('Keep Seerr up to date', 'Background jobs that use your Seerr address and key.');
+                    auto.dataset.section = 'seerrJobs';
+                    auto.appendChild(fieldsBox(jobs));
+                    panel.appendChild(auto);
+                    actions(panel, {
+                        collect: function () {
+                            var plugin = { RequestsEnabled: sw.input.checked };
+                            jobs.forEach(function (item) {
+                                var v = valueOf(item), k = item.option.key;
+                                if (v !== undefined && v !== null && v !== (item.option.type === 'boolean' ? !!p[k] : p[k])) plugin[k] = v;
+                            });
+                            items.forEach(function (item) {
+                                var v = valueOf(item), k = item.option.key;
+                                if (item.option.type === 'secret') { if (v) plugin[k] = v; }
+                                else if (v !== (p[k] || '')) plugin[k] = v;
+                            });
+                            return { plugin: plugin };
+                        }
+                    });
+                }
+
+                function modulePanel(panel, step) {
+                    var s = section(step.section);
+                    if (!s) { panel.appendChild(companionMissing()); return; }
+                    var m = moduleCard(s, step.heading);
+                    panel.appendChild(m.box);
+                    actions(panel, {
+                        test: s.options.length ? function () { return testSection(s.id, companionChange(m)); } : null,
+                        collect: function () { return { companion: [{ id: s.id, body: function () { return companionChange(m); } }] }; }
+                    });
+                }
+
+                function forYouPanel(panel) {
+                    var p = state.plugin, s = section('recommendations'), m = null;
+                    if (s) { m = moduleCard(s, 'Recommended to request'); panel.appendChild(m.box); }
+                    var sw = toggle(!!p.PlayStatsEnabled, 'Turn on Popular this week');
+                    var head = el('div', 'zf-side');
+                    add(head, chip(p.PlayStatsEnabled ? { kind: 'ok', text: 'On' } : { kind: 'off', text: 'Off' }), sw.wrap);
+                    var pop = card('Popular this week', 'Counts how long each title is watched per day across the server, kept for 35 days. No user, device or session is recorded.', head);
+                    pop.dataset.section = 'popular';
+                    panel.appendChild(pop);
+                    if (!s) panel.appendChild(companionMissing());
+                    actions(panel, {
+                        test: m && s.options.length ? function () { return testSection(s.id, companionChange(m)); } : null,
+                        collect: function () {
+                            return { plugin: sw.input.checked !== !!p.PlayStatsEnabled ? { PlayStatsEnabled: sw.input.checked } : {},
+                                companion: m ? [{ id: s.id, body: function () { return companionChange(m); } }] : [] };
+                        }
+                    });
+                }
+
+                // ---- Home rows ----
+                // Same ids as the plugin's HomeBuilder.Catalog. "needs" names the switch a row depends on.
+                var HOME_ROWS = [
+                    { id: 'continue-watching', label: 'Continue Watching', help: 'One card per show: the episode in progress, or the next one.' },
+                    { id: 'requests-ready', label: 'My requests', help: 'The viewer\'s own requests that are on the server.', needs: 'requests' },
+                    { id: 'new-episodes', label: 'New episodes for you', help: 'From shows they marked as favorites, added in the last 14 days.' },
+                    { id: 'short-movies', label: 'Watch in 90 minutes', help: 'Unwatched movies of 90 minutes or less.' },
+                    { id: 'showcase', label: '4K / HDR showcase', help: 'Movies with a verified 4K source.' },
+                    { id: 'curated', label: 'Seasonal picks', help: 'Holidays and seasons, from your collections first.' },
+                    { id: 'popular', label: 'Popular this week', help: 'Most watched on this server.', needs: 'popular' },
+                    { id: 'sports', label: 'Your teams / starting soon', help: 'Sports in the Live TV guide; viewers pick teams from their account menu.' },
+                    { id: 'because-you-watched', label: 'Because you watched', help: 'Up to two rows like titles they finished.' },
+                    { id: 'favorites', label: 'Favorites', help: 'Movies and shows they marked as favorites.' },
+                    { id: 'recently-added-movies', label: 'Recently added movies' },
+                    { id: 'recently-added-shows', label: 'Recently added shows' },
+                    { id: 'watch-again', label: 'Watch again', help: 'Movies and shows they finished.' }
+                ];
+                function homePanel(panel) {
+                    var p = state.plugin;
+                    var off = (p.HomeRowsOff || '').split(',').map(function (x) { return x.trim(); }).filter(Boolean);
+                    var sw = toggle(!!p.HomeRowsEnabled, 'Turn on Zorofin Home rows');
+                    var head = el('div', 'zf-side');
+                    var mark = chip(status({ id: 'home' }));
+                    add(head, mark, sw.wrap);
+                    var box = card('Zorofin Home rows', 'Turn this on, then remove the Home Screen Sections plugin. With it off, Jellyfin\'s own Home stays as it is.', head);
+                    box.dataset.section = 'homeRows';
+                    var rows = HOME_ROWS.map(function (row) {
+                        var wrap = el('div', 'zf-field check'), line = el('label', 'zf-checkrow'), t = toggle(off.indexOf(row.id) < 0, row.label);
+                        var text = el('span', null, row.label);
+                        add(line, text, t.wrap);
+                        wrap.appendChild(line);
+                        var help = row.needs === 'requests' && !(p.RequestsEnabled && seerrReady()) ? 'Needs Requests turned on.'
+                            : row.needs === 'popular' && !p.PlayStatsEnabled ? 'Needs Popular this week (For you).' : row.help;
+                        if (help) wrap.appendChild(el('small', 'zf-help', help));
+                        return { id: row.id, input: t.input, wrap: wrap };
+                    });
+                    var list = fieldsBox(rows);
+                    list.hidden = !sw.input.checked;
+                    sw.input.addEventListener('change', function () {
+                        list.hidden = !sw.input.checked;
+                        // Say what saving will do, so the chip never reads "Off" next to a switch that is on.
+                        mark.textContent = sw.input.checked === !!p.HomeRowsEnabled ? status({ id: 'home' }).text : sw.input.checked ? 'On after you save' : 'Off after you save';
+                    });
+                    box.appendChild(list);
+                    panel.appendChild(box);
+                    actions(panel, {
+                        collect: function () {
+                            var change = {}, nextOff = rows.filter(function (r) { return !r.input.checked; }).map(function (r) { return r.id; })
+                                .concat(off.filter(function (id) { return !HOME_ROWS.some(function (r) { return r.id === id; }); })).join(',');
+                            if (sw.input.checked !== !!p.HomeRowsEnabled) change.HomeRowsEnabled = sw.input.checked;
+                            if (nextOff !== (p.HomeRowsOff || '')) change.HomeRowsOff = nextOff;
+                            return { plugin: change };
+                        }
+                    });
+                }
+
+                function lookPanel(panel) {
+                    var p = state.plugin, s = section('webUi');
+                    var on = !!p.WebUiEnabled && (!s || !!s.enabled);
+                    var sw = toggle(on, 'Turn on the Zorofin look');
+                    sw.input.disabled = !s && !p.WebUiEnabled;
+                    var head = el('div', 'zf-side');
+                    add(head, chip(status(STEPS.filter(function (x) { return x.id === 'look'; })[0])), sw.wrap);
+                    var box = card('Zorofin look in the web client', 'Jellyfin\'s web client loads the Zorofin theme and player from the companion. Turn it off to get plain Jellyfin back.', head);
+                    box.dataset.section = 'webUi';
+                    var items = s ? s.options.map(function (o) { return field(o); }) : [];
+                    applyWhen(items);
+                    var fields = fieldsBox(items);
+                    fields.hidden = !on;
+                    sw.input.addEventListener('change', function () { fields.hidden = !sw.input.checked; });
+                    if (s && s.enabled && s.error) box.appendChild(notice(s.error));
+                    if (items.length) box.appendChild(fields);
+                    panel.appendChild(box);
+                    if (!s) panel.appendChild(companionMissing());
+                    actions(panel, {
+                        collect: function () {
+                            var want = sw.input.checked;
+                            return {
+                                plugin: want !== !!p.WebUiEnabled ? { WebUiEnabled: want } : {},
+                                companion: s ? [{ id: 'webUi', body: function () { return { enabled: want, values: changedValues(items) }; } }] : []
+                            };
+                        }
+                    });
+                }
+
+                // ---- Announcement ----
+                // Same rules as the plugin's feed (AnnouncementFeed.cs), so the status here matches what viewers get.
+                function toLocalInput(iso) {
+                    var t = iso ? Date.parse(iso) : NaN;
+                    if (!isFinite(t)) return '';
+                    var d = new Date(t - new Date(t).getTimezoneOffset() * 60000);
+                    return d.toISOString().slice(0, 16);
+                }
+                function fromLocalInput(value) { if (!value) return ''; var t = Date.parse(value); return isFinite(t) ? new Date(t).toISOString() : ''; }
+                function safeLink(value) {
+                    var href = String(value || '').trim();
+                    return /^\/(?![\/\\])/.test(href) || /^https:\/\/[^\s\/@]+/i.test(href) ? href : '';
+                }
+                function announcementStatus(p) {
+                    if (!p.AnnouncementEnabled) return { kind: 'off', text: 'Off' };
+                    if (!String(p.AnnouncementTitle || '').trim() || !String(p.AnnouncementMessage || '').trim()) return { kind: 'warn', text: 'Needs a title and message' };
+                    var now = Date.now(), start = p.AnnouncementStartAt ? Date.parse(p.AnnouncementStartAt) : null, end = p.AnnouncementEndAt ? Date.parse(p.AnnouncementEndAt) : null;
+                    if (end !== null && end <= now) return { kind: 'off', text: 'Ended' };
+                    if (start !== null && start > now) return { kind: 'ok', text: 'Scheduled' };
+                    return { kind: 'ok', text: 'Showing' };
+                }
+                function icon(path) {
+                    var ns = 'http://www.w3.org/2000/svg', svg = document.createElementNS(ns, 'svg'), d = document.createElementNS(ns, 'path');
+                    svg.setAttribute('viewBox', '0 0 24 24'); svg.setAttribute('aria-hidden', 'true'); d.setAttribute('d', path); svg.appendChild(d); return svg;
+                }
+                function announcePanel(panel) {
+                    var p = state.plugin;
+                    var sw = toggle(!!p.AnnouncementEnabled, 'Show the announcement');
+                    var head = el('div', 'zf-side'), mark = chip(announcementStatus(p));
+                    add(head, mark, sw.wrap);
+                    var box = card('Server message', 'Viewers find it at the top of Notifications, with a dot on the bell until they read it. Editing it shows it again to everyone.', head);
+                    box.dataset.section = 'announcement';
+                    var items = {
+                        type: field({ key: 'AnnouncementType', type: 'choice', label: 'Kind', value: p.AnnouncementType || 'info',
+                            choices: [{ value: 'info', label: 'News' }, { value: 'success', label: 'Good news' }, { value: 'warning', label: 'Heads up' }, { value: 'maintenance', label: 'Maintenance' }] }),
+                        dismissible: field({ key: 'AnnouncementDismissible', type: 'boolean', label: 'Viewers can mark it read', value: p.AnnouncementDismissible !== false,
+                            help: 'Marking it read on one device does the same on that account\'s other devices.' }),
+                        title: field({ key: 'AnnouncementTitle', type: 'text', label: 'Title', value: p.AnnouncementTitle || '', maxLength: 80, wide: true, placeholder: 'Maintenance tonight at 2 AM' }),
+                        message: field({ key: 'AnnouncementMessage', type: 'textarea', label: 'Message', value: p.AnnouncementMessage || '', maxLength: 320, placeholder: 'The server restarts for about ten minutes.' }),
+                        label: field({ key: 'AnnouncementActionLabel', type: 'text', label: 'Button label', value: p.AnnouncementActionLabel || '', maxLength: 40, help: 'Optional.', placeholder: 'Open Requests' }),
+                        href: field({ key: 'AnnouncementActionHref', type: 'text', label: 'Button link', value: p.AnnouncementActionHref || '', help: 'A path on this server, like /web/#/home, or an https link.', placeholder: '/web/#/home' }),
+                        start: field({ key: 'AnnouncementStartAt', type: 'datetime', label: 'Starts', value: p.AnnouncementStartAt || '', help: 'Leave empty to start now.' }),
+                        end: field({ key: 'AnnouncementEndAt', type: 'datetime', label: 'Ends', value: p.AnnouncementEndAt || '', help: 'Leave empty to keep it up.' })
+                    };
+                    var list = Object.keys(items).map(function (k) { return items[k]; });
+                    var fields = fieldsBox(list);
+                    var again = el('button', 'zf-link', 'Show it again to viewers who read it'); again.type = 'button';
+                    var revision = p.AnnouncementRevision || 0, againWrap = el('div', 'zf-field wide');
+                    again.addEventListener('click', function () { revision = (p.AnnouncementRevision || 0) + 1; again.textContent = 'It will show again after you save.'; again.disabled = true; });
+                    againWrap.appendChild(again);
+                    if (p.AnnouncementEnabled && p.AnnouncementTitle) fields.appendChild(againWrap);
+                    var previewLabel = el('p', 'zf-preview-label', 'Preview'), preview = el('div', 'zf-preview');
+                    function draw() {
+                        var type = valueOf(items.type), title = valueOf(items.title), message = valueOf(items.message), label = valueOf(items.label), href = safeLink(valueOf(items.href));
+                        var c = el('div', 'zac'); c.dataset.type = type;
+                        var item = el('div', 'zac-item'), top = el('div', 'zac-top');
+                        add(top, el('p', 'zac-title', title || 'Your title'));
+                        if (valueOf(items.dismissible)) add(top, el('span', 'zac-read', 'Mark read'));
+                        add(item, top, el('p', 'zac-message', message || 'Your message.'));
+                        if (label && href) item.appendChild(el('span', 'zac-action', label));
+                        add(c, el('p', 'zac-head', 'Notifications'), item);
+                        preview.textContent = ''; preview.appendChild(c);
+                    }
+                    list.forEach(function (item) { item.input.addEventListener('input', draw); item.input.addEventListener('change', draw); });
+                    draw();
+                    var body = el('div'); add(body, fields, previewLabel, preview);
+                    body.hidden = !sw.input.checked;
+                    sw.input.addEventListener('change', function () {
+                        body.hidden = !sw.input.checked;
+                        // Say what saving will do, so the chip never reads "Off" next to a switch that is on.
+                        mark.textContent = sw.input.checked ? (p.AnnouncementEnabled ? announcementStatus(p).text : 'On after you save') : (p.AnnouncementEnabled ? 'Off after you save' : 'Off');
+                    });
+                    box.appendChild(body);
+                    panel.appendChild(box);
+                    actions(panel, {
+                        collect: function () {
+                            var want = sw.input.checked, change = {};
+                            if (want) {
+                                var title = valueOf(items.title), message = valueOf(items.message), label = valueOf(items.label), href = valueOf(items.href);
+                                var start = valueOf(items.start), end = valueOf(items.end);
+                                if (!title || !message) throw new Error('Add a title and a message, or turn the announcement off.');
+                                if ((label && !href) || (href && !label)) throw new Error('A button needs both a label and a link.');
+                                if (href && !safeLink(href)) throw new Error('The button link must be a path on this server (starting with /) or an https link.');
+                                if (start && end && Date.parse(end) <= Date.parse(start)) throw new Error('The end has to be after the start.');
+                            }
+                            if (want !== !!p.AnnouncementEnabled) change.AnnouncementEnabled = want;
+                            list.forEach(function (item) {
+                                var v = valueOf(item), k = item.option.key, was = k === 'AnnouncementDismissible' ? p[k] !== false : (p[k] || (k === 'AnnouncementType' ? 'info' : ''));
+                                if (v !== was) change[k] = v;
+                            });
+                            if (revision !== (p.AnnouncementRevision || 0)) change.AnnouncementRevision = revision;
+                            return { plugin: change };
+                        }
+                    });
+                }
+
+                // ---- Tabs ----
+                function allSteps() {
+                    var known = {};
+                    STEPS.forEach(function (s) { if (s.section) known[s.section] = true; });
+                    known.connections = true;
+                    var extra = ((state.companion && state.companion.sections) || []).filter(function (s) { return !known[s.id]; })
+                        .map(function (s) { return { id: 'mod-' + s.id, title: s.title, section: s.id, heading: s.title, summary: s.description || '' }; });
+                    return STEPS.concat(extra);
+                }
+                function show(id) {
+                    state.tab = id;
+                    try { sessionStorage.setItem('zorofin-setup-tab', id); } catch (_) { /* private mode */ }
+                    render();
+                    var tab = tabsEl.querySelector('[data-tab="' + id + '"]');
+                    if (tab) { tab.focus({ preventScroll: true }); if (tab.scrollIntoView) tab.scrollIntoView({ block: 'nearest', inline: 'center' }); }
+                }
+                function render() {
+                    var steps = allSteps();
+                    if (!steps.some(function (s) { return s.id === state.tab; })) state.tab = 'overview';
+                    tabsEl.textContent = '';
+                    steps.forEach(function (s) {
+                        var t = el('button', 'zf-tab'); t.type = 'button';
+                        t.setAttribute('role', 'tab'); t.dataset.tab = s.id;
+                        t.setAttribute('aria-selected', String(s.id === state.tab));
+                        t.tabIndex = s.id === state.tab ? 0 : -1;
+                        if (s.id !== 'overview') t.appendChild(stepMark(status(s).kind));
+                        t.appendChild(el('span', null, s.title));
+                        t.addEventListener('click', function () { show(s.id); });
+                        tabsEl.appendChild(t);
+                    });
+                    var counts = steps.filter(function (s) { return s.id !== 'overview'; }).map(status);
+                    var warn = counts.filter(function (c) { return c.kind === 'warn'; }).length;
+                    var on = counts.filter(function (c) { return c.kind === 'ok'; }).length;
+                    var overall = page.querySelector('#zfOverall');
+                    // Only speak up when something needs fixing; the Overview tab lists the rest.
+                    overall.textContent = warn ? (warn === 1 ? '1 step needs attention' : warn + ' steps need attention') : '';
+
+                    var step = steps.filter(function (s) { return s.id === state.tab; })[0];
+                    var panel = el('div', 'zf-panel');
+                    panel.setAttribute('role', 'tabpanel');
+                    panel.dataset.panel = step.id;
+                    var intro = el('div', 'zf-panel-intro');
+                    var sec = step.section ? section(step.section) : null;
+                    add(intro, el('h2', null, step.id === 'overview' ? 'Your setup' : step.heading || step.title),
+                        el('p', null, step.id === 'overview' ? 'Turn on what you want. The apps only show what this server has.' : step.intro || (sec && sec.description) || ''));
+                    panel.appendChild(intro);
+                    if (step.id === 'overview') overviewPanel(panel);
+                    else if (step.id === 'connect') connectPanel(panel);
+                    else if (step.id === 'requests') requestsPanel(panel);
+                    else if (step.id === 'foryou') forYouPanel(panel);
+                    else if (step.id === 'home') homePanel(panel);
+                    else if (step.id === 'look') lookPanel(panel);
+                    else if (step.id === 'announce') announcePanel(panel);
+                    else modulePanel(panel, step);
+                    panelsEl.textContent = '';
+                    panelsEl.appendChild(panel);
+                }
+                tabsEl.addEventListener('keydown', function (e) {
+                    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+                    var ids = allSteps().map(function (s) { return s.id; }), i = ids.indexOf(state.tab);
+                    show(ids[(i + (e.key === 'ArrowRight' ? 1 : ids.length - 1)) % ids.length]);
+                    e.preventDefault();
+                });
+
+                // ---- Loading ----
+                function load(quiet) {
+                    if (!quiet) Dashboard.showLoadingMsg();
+                    return ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+                        state.plugin = config;
+                        if (!config.CompanionUrl || !config.CompanionSecret) { state.companion = null; state.link = 'notset'; return null; }
+                        return request('GET', settingsUrl).then(function (view) { state.companion = view; state.link = 'ok'; },
+                            function () { state.companion = null; state.link = 'unreachable'; });
+                    }).then(function () { if (!quiet) Dashboard.hideLoadingMsg(); }, function (e) { if (!quiet) Dashboard.hideLoadingMsg(); throw e; });
+                }
+
+                page.addEventListener('pageshow', function () {
+                    try { state.tab = sessionStorage.getItem('zorofin-setup-tab') || 'overview'; } catch (_) { state.tab = 'overview'; }
+                    load(false).then(render, function () {
+                        panelsEl.textContent = '';
+                        panelsEl.appendChild(el('div', 'zf-loading', 'Couldn\'t load the Zorofin settings. Reload the page to try again.'));
+                    });
+                });
+            })();
+        </script>
+    </div>
+</body>
+</html>

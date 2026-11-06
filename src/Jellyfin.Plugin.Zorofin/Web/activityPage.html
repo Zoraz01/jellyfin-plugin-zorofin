@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Zorofin activity</title>
+</head>
+<body>
+    <div id="ZorofinActivityPage" data-role="page" class="page type-interior pluginConfigurationPage zf-act">
+        <style>
+            #ZorofinActivityPage {
+                --zf-bg: #0b0f0d; --zf-panel: #141a17; --zf-raised: #1b231f; --zf-line: rgba(255,255,255,.08);
+                --zf-text: #f3f6f4; --zf-muted: #a9b5ad; --zf-faint: #6f7c74;
+                --zf-green: #42d779; --zf-green-strong: #25b85f; --zf-green-ink: #041208; --zf-green-soft: rgba(66,215,121,.14);
+                --zf-amber: #f2b84b; --zf-amber-soft: rgba(242,184,75,.14); --zf-red: #ff7a6b; --zf-radius: 14px;
+            }
+            #ZorofinActivityPage .zf { box-sizing: border-box; max-width: 1100px; margin: 0 auto; padding: 24px 16px 64px; color: var(--zf-text);
+                font-family: Inter, "SF Pro Text", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 15px; line-height: 1.45; }
+            #ZorofinActivityPage .zf *, #ZorofinActivityPage .zf *::before, #ZorofinActivityPage .zf *::after { box-sizing: border-box; }
+            #ZorofinActivityPage .zf-top { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; margin-bottom: 18px; }
+            #ZorofinActivityPage .zf-top h1 { margin: 0 auto 0 0; font-size: 26px; font-weight: 700; letter-spacing: -.01em; }
+            #ZorofinActivityPage .zf-seg { display: inline-flex; padding: 3px; border-radius: 11px; background: var(--zf-panel); }
+            #ZorofinActivityPage .zf-seg button { height: 34px; padding: 0 13px; border: 0; border-radius: 8px; background: transparent; color: var(--zf-muted);
+                font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+            #ZorofinActivityPage .zf-seg button[aria-pressed="true"] { background: var(--zf-raised); color: var(--zf-text); }
+            #ZorofinActivityPage select, #ZorofinActivityPage input[type="search"] { height: 40px; padding: 0 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,.12);
+                background: var(--zf-bg); color: var(--zf-text); font: inherit; font-size: 14px; color-scheme: dark; min-width: 0; }
+            #ZorofinActivityPage select:focus, #ZorofinActivityPage input:focus { border-color: var(--zf-green); outline: none; box-shadow: 0 0 0 3px var(--zf-green-soft); }
+            #ZorofinActivityPage .zf button:focus-visible { outline: 2px solid var(--zf-green); outline-offset: 2px; }
+            #ZorofinActivityPage .zf-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 12px; }
+            #ZorofinActivityPage .zf-tile { padding: 16px 18px; border-radius: var(--zf-radius); background: var(--zf-panel); }
+            #ZorofinActivityPage .zf-tile b { display: block; font-size: 26px; font-weight: 700; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+            #ZorofinActivityPage .zf-tile span { color: var(--zf-muted); font-size: 13px; font-weight: 600; }
+            #ZorofinActivityPage .zf-card { background: var(--zf-panel); border-radius: var(--zf-radius); padding: 18px 20px; margin-bottom: 12px; min-width: 0; }
+            #ZorofinActivityPage .zf-card h2 { display: flex; align-items: baseline; gap: 10px; margin: 0 0 14px; font-size: 17px; font-weight: 650; }
+            #ZorofinActivityPage .zf-card h2 small { margin-left: auto; color: var(--zf-muted); font-size: 13px; font-weight: 500; font-variant-numeric: tabular-nums; }
+            #ZorofinActivityPage .zf-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+            #ZorofinActivityPage .zf-grid .zf-card { margin-bottom: 0; }
+            #ZorofinActivityPage .zf-grid + .zf-card, #ZorofinActivityPage .zf-card + .zf-grid { margin-top: 12px; }
+            #ZorofinActivityPage .zf-chart svg { display: block; width: 100%; height: 190px; overflow: visible; }
+            #ZorofinActivityPage .zf-chart rect.bar { fill: var(--zf-green-strong); }
+            #ZorofinActivityPage .zf-chart rect.bar.on, #ZorofinActivityPage .zf-chart rect.bar:hover { fill: var(--zf-green); }
+            #ZorofinActivityPage .zf-chart text { fill: var(--zf-faint); font-size: 11px; }
+            #ZorofinActivityPage .zf-chart line { stroke: var(--zf-line); }
+            #ZorofinActivityPage .zf-heat { display: grid; grid-template-columns: 34px repeat(24, minmax(0, 1fr)); gap: 3px; font-size: 11px; color: var(--zf-faint); }
+            #ZorofinActivityPage .zf-heat i { display: block; height: 18px; border-radius: 3px; background: var(--zf-green); }
+            #ZorofinActivityPage .zf-heat span { align-self: center; }
+            #ZorofinActivityPage .zf-bars { margin: 0; padding: 0; list-style: none; }
+            #ZorofinActivityPage .zf-bars li { position: relative; display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 8px; font-size: 14px; }
+            #ZorofinActivityPage .zf-bars li + li { margin-top: 3px; }
+            #ZorofinActivityPage .zf-bars li::before { content: ""; position: absolute; inset: 0 auto 0 0; width: var(--w, 0%); border-radius: 8px; background: var(--zf-green-soft); }
+            #ZorofinActivityPage .zf-bars li > * { position: relative; }
+            #ZorofinActivityPage .zf-bars .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+            #ZorofinActivityPage .zf-bars .num { color: var(--zf-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+            #ZorofinActivityPage .zf-bars button.name { border: 0; padding: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+            #ZorofinActivityPage .zf-bars button.name:hover { text-decoration: underline; }
+            #ZorofinActivityPage .zf-empty { color: var(--zf-faint); font-size: 14px; padding: 6px 0; }
+            #ZorofinActivityPage .zf-logbar { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
+            #ZorofinActivityPage .zf-logbar input { flex: 1 1 220px; }
+            #ZorofinActivityPage .zf-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+            #ZorofinActivityPage .zf-table th { text-align: left; color: var(--zf-faint); font-size: 12px; font-weight: 600; padding: 0 10px 8px; white-space: nowrap; }
+            #ZorofinActivityPage .zf-table td { padding: 9px 10px; border-top: 1px solid var(--zf-line); vertical-align: top; }
+            #ZorofinActivityPage .zf-table td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+            #ZorofinActivityPage .zf-table td small { display: block; color: var(--zf-muted); font-size: 12px; }
+            #ZorofinActivityPage .zf-tag { display: inline-block; padding: 1px 7px; border-radius: 6px; background: var(--zf-raised); color: var(--zf-muted); font-size: 12px; font-weight: 600; white-space: nowrap; }
+            #ZorofinActivityPage .zf-tag.tc { background: var(--zf-amber-soft); color: var(--zf-amber); }
+            #ZorofinActivityPage .zf-pager { display: flex; align-items: center; gap: 10px; margin-top: 12px; color: var(--zf-muted); font-size: 13px; }
+            #ZorofinActivityPage .zf-pager span { margin-right: auto; }
+            #ZorofinActivityPage .zf-btn { display: inline-flex; align-items: center; justify-content: center; height: 40px; padding: 0 18px; border-radius: 10px;
+                border: 1px solid rgba(255,255,255,.14); background: transparent; color: var(--zf-text); font: inherit; font-size: 14px; font-weight: 650; cursor: pointer; white-space: nowrap; }
+            #ZorofinActivityPage .zf-btn:hover:not(:disabled) { background: rgba(255,255,255,.06); }
+            #ZorofinActivityPage .zf-btn.primary { background: var(--zf-green-strong); border-color: var(--zf-green-strong); color: var(--zf-green-ink); }
+            #ZorofinActivityPage .zf-btn.danger { border-color: rgba(255,122,107,.4); color: #ffb3a9; }
+            #ZorofinActivityPage .zf-btn:disabled { opacity: .45; cursor: default; }
+            #ZorofinActivityPage .zf-settings { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 18px; }
+            #ZorofinActivityPage .zf-settings label { display: inline-flex; align-items: center; gap: 10px; font-weight: 600; font-size: 14px; }
+            #ZorofinActivityPage .zf-settings p, #ZorofinActivityPage .zf-note { flex-basis: 100%; margin: 0; color: var(--zf-muted); font-size: 13px; max-width: 75ch; }
+            #ZorofinActivityPage .zf-note code { color: var(--zf-text); font-size: 12px; }
+            #ZorofinActivityPage .zf-switch { position: relative; flex: none; width: 52px; height: 30px; }
+            #ZorofinActivityPage .zf-switch input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; z-index: 1; }
+            #ZorofinActivityPage .zf-switch i { position: absolute; inset: 0; border-radius: 999px; background: #39423c; transition: background .15s; }
+            #ZorofinActivityPage .zf-switch i::after { content: ""; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: #fff; transition: transform .15s; }
+            #ZorofinActivityPage .zf-switch input:checked + i { background: var(--zf-green-strong); }
+            #ZorofinActivityPage .zf-switch input:checked + i::after { transform: translateX(22px); }
+            #ZorofinActivityPage .zf-switch input:focus-visible + i { outline: 2px solid var(--zf-green); outline-offset: 2px; }
+            #ZorofinActivityPage .zf-off { padding: 22px 20px; border-radius: var(--zf-radius); background: var(--zf-amber-soft); color: #fbe3b3; margin-bottom: 12px; font-size: 14px; }
+            #ZorofinActivityPage .zf-status { color: var(--zf-muted); font-size: 13px; }
+            #ZorofinActivityPage [hidden] { display: none !important; }
+            @media (max-width: 760px) {
+                #ZorofinActivityPage .zf { padding: 12px 12px 48px; }
+                #ZorofinActivityPage .zf-top h1 { font-size: 22px; flex-basis: 100%; }
+                #ZorofinActivityPage .zf-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+                #ZorofinActivityPage .zf-grid { grid-template-columns: 1fr; }
+                #ZorofinActivityPage .zf-card { padding: 16px; }
+                #ZorofinActivityPage .zf-heat { grid-template-columns: 30px repeat(24, minmax(0, 1fr)); gap: 2px; }
+                #ZorofinActivityPage .zf-table .wide { display: none; }
+            }
+        </style>
+        <div data-role="content">
+            <div class="content-primary zf">
+                <header class="zf-top">
+                    <h1>Activity</h1>
+                    <div class="zf-seg" role="group" aria-label="Time range" id="zfRange">
+                        <button type="button" data-days="7">7 days</button>
+                        <button type="button" data-days="30" aria-pressed="true">30 days</button>
+                        <button type="button" data-days="90">90 days</button>
+                        <button type="button" data-days="365">Year</button>
+                        <button type="button" data-days="3650">All</button>
+                    </div>
+                    <select id="zfUser" aria-label="Viewer"><option value="">Everyone</option></select>
+                    <select id="zfType" aria-label="Kind">
+                        <option value="">Everything</option>
+                        <option value="Movie">Movies</option>
+                        <option value="Episode">Episodes</option>
+                        <option value="TvChannel">Live TV</option>
+                        <option value="Audio">Music</option>
+                    </select>
+                </header>
+
+                <div class="zf-off" id="zfOff" hidden>Play history is off, so nothing new is being recorded. Turn it on under Settings at the bottom of this page.</div>
+
+                <div class="zf-tiles">
+                    <div class="zf-tile"><b id="zfTime">–</b><span>Watch time</span></div>
+                    <div class="zf-tile"><b id="zfPlays">–</b><span>Plays</span></div>
+                    <div class="zf-tile"><b id="zfViewers">–</b><span>Viewers</span></div>
+                    <div class="zf-tile"><b id="zfTitles">–</b><span>Titles</span></div>
+                </div>
+
+                <section class="zf-card zf-chart">
+                    <h2>Watch time per day <small id="zfReadout"></small></h2>
+                    <div id="zfDays"></div>
+                </section>
+
+                <section class="zf-card">
+                    <h2>When people watch</h2>
+                    <div class="zf-heat" id="zfHeat"></div>
+                </section>
+
+                <div class="zf-grid">
+                    <section class="zf-card"><h2>Shows</h2><ul class="zf-bars" id="zfShows"></ul></section>
+                    <section class="zf-card"><h2>Movies</h2><ul class="zf-bars" id="zfMovies"></ul></section>
+                    <section class="zf-card"><h2>Viewers</h2><ul class="zf-bars" id="zfUsers"></ul></section>
+                    <section class="zf-card"><h2>Apps</h2><ul class="zf-bars" id="zfClients"></ul></section>
+                    <section class="zf-card"><h2>Devices</h2><ul class="zf-bars" id="zfDevices"></ul></section>
+                    <section class="zf-card"><h2>Playback</h2><ul class="zf-bars" id="zfMethods"></ul></section>
+                    <section class="zf-card" id="zfChannelsCard"><h2>Live TV channels</h2><ul class="zf-bars" id="zfChannels"></ul></section>
+                    <section class="zf-card"><h2>Kinds</h2><ul class="zf-bars" id="zfTypes"></ul></section>
+                </div>
+
+                <section class="zf-card">
+                    <h2>Every play</h2>
+                    <div class="zf-logbar">
+                        <input type="search" id="zfSearch" placeholder="Search titles, viewers, apps or devices" aria-label="Search plays">
+                        <button type="button" class="zf-btn" id="zfExport">Download CSV</button>
+                    </div>
+                    <table class="zf-table">
+                        <thead><tr><th>When</th><th>Viewer</th><th>Title</th><th class="wide">App and device</th><th class="wide">Playback</th><th style="text-align:right">Watched</th></tr></thead>
+                        <tbody id="zfLog"></tbody>
+                    </table>
+                    <div class="zf-pager"><span id="zfLogCount"></span><button type="button" class="zf-btn" id="zfPrev">Newer</button><button type="button" class="zf-btn" id="zfNext">Older</button></div>
+                </section>
+
+                <section class="zf-card">
+                    <h2>Settings</h2>
+                    <div class="zf-settings">
+                        <label><span class="zf-switch"><input type="checkbox" id="zfOn"><i></i></span>Record play history</label>
+                        <label>Keep
+                            <select id="zfKeep">
+                                <option value="90">90 days</option>
+                                <option value="180">6 months</option>
+                                <option value="365">1 year</option>
+                                <option value="730">2 years</option>
+                                <option value="0">Forever</option>
+                            </select>
+                        </label>
+                        <button type="button" class="zf-btn primary" id="zfSave">Save</button>
+                        <span class="zf-status" id="zfSaved"></span>
+                        <p>Records who watched what, when, how long, and on which app and device. Only administrators can see it. Popular this week doesn't use it and stores no names.</p>
+                        <p id="zfStored"></p>
+                        <p class="zf-note">To bring in history from Playback Reporting, run <code>tools/import-playback-reporting.py</code> from the Zorofin repository on the server. Running it again skips plays it already brought in.</p>
+                        <button type="button" class="zf-btn danger" id="zfDeleteUser" hidden>Delete this viewer's history</button>
+                        <button type="button" class="zf-btn danger" id="zfDeleteAll">Delete all history</button>
+                    </div>
+                </section>
+            </div>
+        </div>
+        <script type="text/javascript">
+            (function () {
+                var pluginId = 'e49272bf-d1f8-4d83-8cd4-7b3c7f2a1fce';
+                var base = 'Zorofin/Admin/Activity';
+                var page = document.querySelector('#ZorofinActivityPage');
+                var $ = function (id) { return page.querySelector('#' + id); };
+                var METHODS = { DirectPlay: 'Direct play', DirectStream: 'Direct stream', Transcode: 'Transcode' };
+                var DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                var state = { days: 30, user: '', type: '', q: '', skip: 0, take: 25, total: 0, summary: null, knownUsers: {} };
+
+                function el(tag, className, text) {
+                    var node = document.createElement(tag);
+                    if (className) node.className = className;
+                    if (text !== undefined && text !== null) node.textContent = text;
+                    return node;
+                }
+                function query(extra) {
+                    var params = { days: state.days, offset: -new Date().getTimezoneOffset() };
+                    if (state.user) params.userId = state.user;
+                    if (state.type) params.type = state.type;
+                    Object.keys(extra || {}).forEach(function (k) { params[k] = extra[k]; });
+                    return Object.keys(params).map(function (k) { return encodeURIComponent(k) + '=' + encodeURIComponent(params[k]); }).join('&');
+                }
+                function get(path, extra, dataType) {
+                    return ApiClient.ajax({ type: 'GET', url: ApiClient.getUrl(base + path) + '?' + query(extra), dataType: dataType || 'json' });
+                }
+                function duration(seconds) {
+                    if (seconds > 0 && seconds < 60) return Math.round(seconds) + 's';
+                    var m = Math.round(seconds / 60);
+                    if (m < 60) return m + 'm';
+                    var h = Math.floor(m / 60);
+                    if (h < 100) return h + 'h ' + (m % 60) + 'm';
+                    return h.toLocaleString() + 'h';
+                }
+                function when(iso) {
+                    var d = new Date(iso);
+                    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ', ' + d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+                }
+
+                // ---- Charts ----
+                function dayChart(days) {
+                    var box = $('zfDays');
+                    box.textContent = '';
+                    var max = Math.max.apply(null, days.map(function (d) { return d.seconds; }).concat([1]));
+                    var ns = 'http://www.w3.org/2000/svg', w = 1000, h = 170, gap = days.length > 120 ? 0 : 2;
+                    var svg = document.createElementNS(ns, 'svg');
+                    svg.setAttribute('viewBox', '0 0 ' + w + ' ' + (h + 20));
+                    svg.setAttribute('preserveAspectRatio', 'none');
+                    svg.setAttribute('role', 'img');
+                    svg.setAttribute('aria-label', 'Watch time per day');
+                    var axis = document.createElementNS(ns, 'line');
+                    axis.setAttribute('x1', 0); axis.setAttribute('x2', w); axis.setAttribute('y1', h); axis.setAttribute('y2', h);
+                    svg.appendChild(axis);
+                    var bw = w / Math.max(days.length, 1);
+                    var readout = $('zfReadout');
+                    var label = function (d) { return new Date(d.date + 'T12:00:00').toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }) + ': ' + duration(d.seconds) + ', ' + d.plays + (d.plays === 1 ? ' play' : ' plays'); };
+                    days.forEach(function (d, i) {
+                        var bh = d.seconds ? Math.max(2, d.seconds / max * (h - 8)) : 0;
+                        var r = document.createElementNS(ns, 'rect');
+                        r.setAttribute('class', 'bar');
+                        r.setAttribute('x', i * bw + gap / 2); r.setAttribute('width', Math.max(bw - gap, 1));
+                        r.setAttribute('y', h - bh); r.setAttribute('height', bh); r.setAttribute('rx', bw > 8 ? 2 : 0);
+                        var t = document.createElementNS(ns, 'title'); t.textContent = label(d); r.appendChild(t);
+                        r.addEventListener('mouseenter', function () { readout.textContent = label(d); });
+                        svg.appendChild(r);
+                    });
+                    // A few date labels along the bottom.
+                    var every = Math.ceil(days.length / 6);
+                    days.forEach(function (d, i) {
+                        if (i % every) return;
+                        var t = document.createElementNS(ns, 'text');
+                        t.setAttribute('x', i * bw + 2); t.setAttribute('y', h + 16);
+                        t.textContent = new Date(d.date + 'T12:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+                        svg.appendChild(t);
+                    });
+                    svg.addEventListener('mouseleave', function () { readout.textContent = ''; });
+                    box.appendChild(svg);
+                }
+                function heatmap(rows) {
+                    var box = $('zfHeat');
+                    box.textContent = '';
+                    var max = 1;
+                    rows.forEach(function (r) { r.forEach(function (v) { if (v > max) max = v; }); });
+                    box.appendChild(el('span'));
+                    for (var hr = 0; hr < 24; hr++) box.appendChild(el('span', '', hr % 6 === 0 ? (hr === 0 ? '12a' : hr === 12 ? '12p' : (hr % 12) + (hr < 12 ? 'a' : 'p')) : ''));
+                    // Start the week on Monday.
+                    [1, 2, 3, 4, 5, 6, 0].forEach(function (day) {
+                        box.appendChild(el('span', '', DAYS[day]));
+                        rows[day].forEach(function (v, hour) {
+                            var cell = el('i');
+                            cell.style.opacity = v ? (0.18 + 0.82 * v / max).toFixed(2) : '0.05';
+                            cell.title = DAYS[day] + ' ' + hour + ':00 – ' + duration(v);
+                            box.appendChild(cell);
+                        });
+                    });
+                }
+                function bars(id, list, onPick) {
+                    var ul = $(id);
+                    ul.textContent = '';
+                    if (!list.length) { ul.appendChild(el('li', 'zf-empty', 'Nothing yet')); return; }
+                    var max = list[0].seconds || 1;
+                    list.slice(0, 10).forEach(function (row) {
+                        var li = el('li');
+                        li.style.setProperty('--w', Math.max(2, row.seconds / max * 100).toFixed(1) + '%');
+                        var name = onPick ? el('button', 'name', row.name || 'Unknown') : el('span', 'name', row.name || 'Unknown');
+                        if (onPick) { name.type = 'button'; name.addEventListener('click', function () { onPick(row); }); }
+                        li.appendChild(name);
+                        var detail = row.plays + (row.plays === 1 ? ' play' : ' plays');
+                        if (row.viewers > 1) detail += ' · ' + row.viewers + ' viewers';
+                        li.appendChild(el('span', 'num', duration(row.seconds) + ' · ' + detail));
+                        ul.appendChild(li);
+                    });
+                }
+
+                // ---- Loading ----
+                function rememberUsers(users) {
+                    users.forEach(function (u) { state.knownUsers[u.id] = u.name || 'Unknown'; });
+                    var select = $('zfUser'), current = select.value;
+                    var ids = Object.keys(state.knownUsers).sort(function (a, b) { return state.knownUsers[a].localeCompare(state.knownUsers[b]); });
+                    select.textContent = '';
+                    select.appendChild(new Option('Everyone', ''));
+                    ids.forEach(function (id) { select.appendChild(new Option(state.knownUsers[id], id)); });
+                    select.value = current;
+                }
+                function loadSummary() {
+                    return get('/Summary').then(function (s) {
+                        state.summary = s;
+                        $('zfTime').textContent = duration(s.totals.seconds);
+                        $('zfPlays').textContent = s.totals.plays.toLocaleString();
+                        $('zfViewers').textContent = s.totals.users.toLocaleString();
+                        $('zfTitles').textContent = s.totals.titles.toLocaleString();
+                        dayChart(s.days);
+                        heatmap(s.heatmap);
+                        bars('zfShows', s.shows);
+                        bars('zfMovies', s.movies);
+                        bars('zfUsers', s.users, state.user ? null : function (u) { pickUser(u.id); });
+                        bars('zfClients', s.clients);
+                        bars('zfDevices', s.devices);
+                        bars('zfMethods', s.methods.map(function (m) { return { name: METHODS[m.name] || m.name, seconds: m.seconds, plays: m.plays }; }));
+                        bars('zfChannels', s.channels);
+                        bars('zfTypes', s.types.map(function (t) { return { name: ({ Movie: 'Movies', Episode: 'Episodes', TvChannel: 'Live TV', Audio: 'Music' })[t.name] || t.name, seconds: t.seconds, plays: t.plays }; }));
+                        $('zfChannelsCard').hidden = !s.channels.length;
+                        if (!state.user) rememberUsers(s.users);
+                    });
+                }
+                function loadLog() {
+                    return get('/Log', { skip: state.skip, take: state.take, q: state.q }).then(function (log) {
+                        state.total = log.total;
+                        var body = $('zfLog');
+                        body.textContent = '';
+                        if (!log.items.length) {
+                            var tr = el('tr'), td = el('td', 'zf-empty', state.q ? 'No plays match.' : 'No plays in this range.');
+                            td.colSpan = 6; tr.appendChild(td); body.appendChild(tr);
+                        }
+                        log.items.forEach(function (p) {
+                            var tr = el('tr');
+                            tr.appendChild(el('td', '', when(p.started)));
+                            tr.appendChild(el('td', '', p.userName || 'Unknown'));
+                            var title = el('td', '', p.seriesName || p.itemName);
+                            if (p.seriesName) title.appendChild(el('small', '', (p.season != null ? 'S' + p.season + (p.episode != null ? ' E' + p.episode : '') + ' · ' : '') + p.itemName));
+                            tr.appendChild(title);
+                            var app = el('td', 'wide', p.client || '');
+                            if (p.device) app.appendChild(el('small', '', p.device));
+                            tr.appendChild(app);
+                            var method = el('td', 'wide');
+                            if (p.method) {
+                                var tc = p.method === 'Transcode';
+                                method.appendChild(el('span', 'zf-tag' + (tc ? ' tc' : ''), tc ? 'Transcode' + (p.transcode ? ' (' + p.transcode + ')' : '') : METHODS[p.method] || p.method));
+                            }
+                            tr.appendChild(method);
+                            tr.appendChild(el('td', 'num', duration(p.seconds) + (p.completed ? ' ✓' : '')));
+                            body.appendChild(tr);
+                        });
+                        var last = Math.min(state.skip + state.take, state.total);
+                        $('zfLogCount').textContent = state.total ? (state.skip + 1) + '–' + last + ' of ' + state.total.toLocaleString() : '';
+                        $('zfPrev').disabled = state.skip === 0;
+                        $('zfNext').disabled = last >= state.total;
+                    });
+                }
+                function loadStatus() {
+                    return Promise.all([ApiClient.getPluginConfiguration(pluginId), get('/Status')]).then(function (r) {
+                        var config = r[0], status = r[1];
+                        $('zfOn').checked = !!config.PlayHistoryEnabled;
+                        var keep = String(config.PlayHistoryRetentionDays == null ? 365 : config.PlayHistoryRetentionDays);
+                        if (!$('zfKeep').querySelector('option[value="' + keep + '"]')) $('zfKeep').appendChild(new Option(keep + ' days', keep));
+                        $('zfKeep').value = keep;
+                        $('zfOff').hidden = !!config.PlayHistoryEnabled;
+                        $('zfStored').textContent = status.plays
+                            ? status.plays.toLocaleString() + ' plays stored, the first on ' + new Date(status.first).toLocaleDateString() + (status.imported ? ' (' + status.imported.toLocaleString() + ' brought in from Playback Reporting).' : '.')
+                            : 'Nothing stored yet.';
+                    });
+                }
+                function refresh() {
+                    state.skip = 0;
+                    return Promise.all([loadSummary(), loadLog()]).catch(function () {
+                        $('zfReadout').textContent = 'Couldn\'t load activity. Reload the page to try again.';
+                    });
+                }
+                function pickUser(id) {
+                    state.user = id;
+                    $('zfUser').value = id;
+                    $('zfDeleteUser').hidden = !id;
+                    refresh();
+                }
+
+                // ---- Controls ----
+                $('zfRange').addEventListener('click', function (e) {
+                    var b = e.target.closest('button[data-days]');
+                    if (!b) return;
+                    $('zfRange').querySelectorAll('button').forEach(function (x) { x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); });
+                    state.days = Number(b.dataset.days);
+                    refresh();
+                });
+                $('zfUser').addEventListener('change', function () { pickUser(this.value); });
+                $('zfType').addEventListener('change', function () { state.type = this.value; refresh(); });
+                var typing;
+                $('zfSearch').addEventListener('input', function () {
+                    var value = this.value;
+                    clearTimeout(typing);
+                    typing = setTimeout(function () { state.q = value.trim(); state.skip = 0; loadLog(); }, 250);
+                });
+                $('zfPrev').addEventListener('click', function () { state.skip = Math.max(0, state.skip - state.take); loadLog(); });
+                $('zfNext').addEventListener('click', function () { state.skip += state.take; loadLog(); });
+                $('zfExport').addEventListener('click', function () {
+                    var button = this;
+                    button.disabled = true;
+                    get('/Export', { q: state.q }, 'text').then(function (csv) {
+                        var link = document.createElement('a');
+                        link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+                        link.download = 'zorofin-activity-' + new Date().toISOString().slice(0, 10) + '.csv';
+                        document.body.appendChild(link);
+                        link.click();
+                        setTimeout(function () { URL.revokeObjectURL(link.href); link.remove(); }, 1000);
+                    }).catch(function () { Dashboard.alert('Couldn\'t download the CSV. Try again.'); })
+                        .then(function () { button.disabled = false; });
+                });
+                $('zfSave').addEventListener('click', function () {
+                    var button = this;
+                    button.disabled = true;
+                    ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+                        config.PlayHistoryEnabled = $('zfOn').checked;
+                        config.PlayHistoryRetentionDays = Number($('zfKeep').value);
+                        return ApiClient.updatePluginConfiguration(pluginId, config);
+                    }).then(function () {
+                        $('zfSaved').textContent = 'Saved';
+                        setTimeout(function () { $('zfSaved').textContent = ''; }, 2500);
+                        return loadStatus();
+                    }).catch(function () { $('zfSaved').textContent = 'Couldn\'t save. Try again.'; })
+                        .then(function () { button.disabled = false; });
+                });
+                function remove(userId, message) {
+                    if (!window.confirm(message)) return;
+                    ApiClient.ajax({ type: 'DELETE', url: ApiClient.getUrl(base) + (userId ? '?userId=' + encodeURIComponent(userId) : ''), dataType: 'json' })
+                        .then(function (r) {
+                            $('zfSaved').textContent = r.deleted.toLocaleString() + ' plays deleted';
+                            if (userId) { delete state.knownUsers[userId]; pickUser(''); rememberUsers([]); } else { state.knownUsers = {}; rememberUsers([]); refresh(); }
+                            loadStatus();
+                        }, function () { Dashboard.alert('Couldn\'t delete the history. Try again.'); });
+                }
+                $('zfDeleteUser').addEventListener('click', function () {
+                    remove(state.user, 'Delete every recorded play for ' + (state.knownUsers[state.user] || 'this viewer') + '? This can\'t be undone.');
+                });
+                $('zfDeleteAll').addEventListener('click', function () {
+                    remove(null, 'Delete all play history for everyone? Charts and Rewind lose this data. This can\'t be undone.');
+                });
+
+                page.addEventListener('pageshow', function () {
+                    Dashboard.showLoadingMsg();
+                    Promise.all([loadStatus(), refresh()]).catch(function () {}).then(function () { Dashboard.hideLoadingMsg(); });
+                });
+            })();
+        </script>
+    </div>
+</body>
+</html>

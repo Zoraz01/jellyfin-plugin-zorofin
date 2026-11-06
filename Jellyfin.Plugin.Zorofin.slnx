@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Jellyfin.Plugin.Zorofin/Jellyfin.Plugin.Zorofin.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Jellyfin.Plugin.Zorofin.Tests/Jellyfin.Plugin.Zorofin.Tests.csproj" />
+  </Folder>
+</Solution>
