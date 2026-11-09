@@ -128,6 +128,24 @@ public class HomeRowsTests
     }
 
     [Fact]
+    public void RequestsMatchLibraryItemsByTmdbId()
+    {
+        var movie = new MediaBrowser.Controller.Entities.Movies.Movie { Id = Guid.NewGuid(), Name = "The Notebook" };
+        movie.ProviderIds = new Dictionary<string, string> { ["Tmdb"] = "11036" };
+        var show = new MediaBrowser.Controller.Entities.TV.Series { Id = Guid.NewGuid(), Name = "Show" };
+        show.ProviderIds = new Dictionary<string, string> { ["Tmdb"] = "11036" };
+        var other = new MediaBrowser.Controller.Entities.Movies.Movie { Id = Guid.NewGuid(), Name = "Other" };
+        other.ProviderIds = new Dictionary<string, string> { ["Tmdb"] = "500" };
+        var untagged = new MediaBrowser.Controller.Entities.Movies.Movie { Id = Guid.NewGuid(), Name = "No ids" };
+
+        var index = JellyfinHomeSource.IndexByTmdb(new MediaBrowser.Controller.Entities.BaseItem[] { movie, show, other, untagged });
+
+        Assert.Equal(movie.Id, Assert.Single(index[(Jellyfin.Data.Enums.BaseItemKind.Movie, "11036")]).Id);
+        Assert.Equal(show.Id, Assert.Single(index[(Jellyfin.Data.Enums.BaseItemKind.Series, "11036")]).Id);
+        Assert.Equal(3, index.Count);
+    }
+
+    [Fact]
     public void SimilarRanksSharedGenres()
     {
         var seed = Movie("Seed", genres: new[] { "Action", "Comedy" });
@@ -177,6 +195,26 @@ public class HomeRowsTests
         wanted = HomeRowsService.WantedRows(config);
         Assert.Contains("popular", wanted);
         Assert.Contains("requests-ready", wanted);
+        config.PlayStatsEnabled = false;
+        config.PlayHistoryEnabled = true;
+        Assert.Contains("popular", HomeRowsService.WantedRows(config));
+    }
+
+    [Fact]
+    public void PopularRanksShowsAndMoviesFromHistory()
+    {
+        var show = Guid.NewGuid();
+        var movie = Guid.NewGuid();
+        var trailer = Guid.NewGuid();
+        var plays = new[]
+        {
+            new Jellyfin.Plugin.Zorofin.Stats.PlayEvent { ItemId = Guid.NewGuid(), SeriesId = show, ItemType = "Episode", Seconds = 1500 },
+            new Jellyfin.Plugin.Zorofin.Stats.PlayEvent { ItemId = Guid.NewGuid(), SeriesId = show, ItemType = "Episode", Seconds = 1500 },
+            new Jellyfin.Plugin.Zorofin.Stats.PlayEvent { ItemId = movie, ItemType = "Movie", Seconds = 2400 },
+            new Jellyfin.Plugin.Zorofin.Stats.PlayEvent { ItemId = trailer, ItemType = "Movie", Seconds = 30 },
+            new Jellyfin.Plugin.Zorofin.Stats.PlayEvent { ItemId = Guid.NewGuid(), ItemType = "Audio", Seconds = 3000 },
+        };
+        Assert.Equal(new[] { show, movie }, HomeRules.PopularTitles(plays));
     }
 
     [Fact]

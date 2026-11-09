@@ -1,6 +1,8 @@
 using System.IO;
 using Jellyfin.Plugin.Zorofin.Announcements;
+using Jellyfin.Plugin.Zorofin.Arr;
 using Jellyfin.Plugin.Zorofin.Companion;
+using Jellyfin.Plugin.Zorofin.Extras;
 using Jellyfin.Plugin.Zorofin.Home;
 using Jellyfin.Plugin.Zorofin.Requests;
 using Jellyfin.Plugin.Zorofin.Stats;
@@ -23,7 +25,21 @@ public class ServiceRegistrator : IPluginServiceRegistrator
             .ConfigurePrimaryHttpMessageHandler(() => new System.Net.Http.SocketsHttpHandler { AllowAutoRedirect = false });
         serviceCollection.AddHttpClient(CompanionClient.HttpClientName, client => client.Timeout = System.TimeSpan.FromSeconds(10))
             .ConfigurePrimaryHttpMessageHandler(() => new System.Net.Http.SocketsHttpHandler { AllowAutoRedirect = false });
+        serviceCollection.AddHttpClient(ExtrasService.HttpClientName, client => client.Timeout = System.TimeSpan.FromSeconds(8))
+            .ConfigurePrimaryHttpMessageHandler(() => new System.Net.Http.SocketsHttpHandler { AllowAutoRedirect = false });
         serviceCollection.AddSingleton<UpstreamClient>();
+        serviceCollection.AddSingleton<ExtrasService>();
+        serviceCollection.AddSingleton<ArrService>();
+        serviceCollection.AddSingleton(provider => new CatchUpLog(
+            Path.Combine(provider.GetRequiredService<IApplicationPaths>().DataPath, "zorofin", "catchup-log.jsonl")));
+        serviceCollection.AddHostedService(provider => new WatchlistSync(
+            provider.GetRequiredService<MediaBrowser.Controller.Library.IUserManager>(),
+            provider.GetRequiredService<MediaBrowser.Controller.Library.ILibraryManager>(),
+            provider.GetRequiredService<MediaBrowser.Controller.Library.IUserDataManager>(),
+            provider.GetRequiredService<UpstreamClient>(),
+            provider.GetRequiredService<SeerrUserDirectory>(),
+            Path.Combine(provider.GetRequiredService<IApplicationPaths>().DataPath, "zorofin", "watchlist-sync.json"),
+            provider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<WatchlistSync>>()));
         serviceCollection.AddSingleton<CompanionClient>();
         serviceCollection.AddSingleton<SeerrUserDirectory>();
         serviceCollection.AddSingleton<RequestsService>();
@@ -31,6 +47,8 @@ public class ServiceRegistrator : IPluginServiceRegistrator
             Path.Combine(provider.GetRequiredService<IApplicationPaths>().DataPath, "zorofin", "play-stats.json")));
         serviceCollection.AddSingleton(provider => new PlayHistoryStore(
             Path.Combine(provider.GetRequiredService<IApplicationPaths>().DataPath, "zorofin", "play-history")));
+        serviceCollection.AddSingleton(provider => new ContinueWatchingHides(
+            Path.Combine(provider.GetRequiredService<IApplicationPaths>().DataPath, "zorofin", "continue-watching-hidden.json")));
         serviceCollection.AddSingleton<HomeRowsService>();
         serviceCollection.AddHostedService<PlayStatsRecorder>();
         serviceCollection.AddHostedService<SeerrAutomations>();

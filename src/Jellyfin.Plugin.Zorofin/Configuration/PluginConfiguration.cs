@@ -82,6 +82,14 @@ public class PluginConfiguration : BasePluginConfiguration
     /// </summary>
     public string HomeCuratedCalendar { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Gets or sets the older app features this server still serves itself, comma separated (for example
+    /// "support,requests,homeRows"). Each is listed at version 1 in the capability manifest, ahead of the plugin's
+    /// own version, so Zorofin apps that predate the plugin keep working. Only for servers that already run those
+    /// routes, such as a server moving from its own support service to the plugin. Empty on a new server.
+    /// </summary>
+    public string LegacyAppFeatures { get; set; } = string.Empty;
+
     /// <summary>Gets or sets a value indicating whether the announcement banner is shown.</summary>
     public bool AnnouncementEnabled { get; set; }
 
@@ -111,4 +119,52 @@ public class PluginConfiguration : BasePluginConfiguration
 
     /// <summary>Gets or sets a number the setup page raises to show an unchanged announcement again to viewers who dismissed it.</summary>
     public int AnnouncementRevision { get; set; }
+
+    /// <summary>Gets or sets the Home banner's hand-picked titles: Jellyfin item ids, comma separated, in order. Empty picks at random.</summary>
+    public string HomeBannerItemIds { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets a value indicating whether the Home banner plays each title's trailer, muted, behind the slide.</summary>
+    public bool HomeBannerTrailers { get; set; }
+
+    /// <summary>Gets or sets a value indicating whether trailer intros and sponsor segments are skipped using SponsorBlock.</summary>
+    public bool HomeBannerSkipIntros { get; set; } = true;
+
+    /// <summary>Gets or sets a value indicating whether viewers get the Calendar of upcoming episodes and movies (Sonarr and Radarr).</summary>
+    public bool CalendarEnabled { get; set; }
+
+    /// <summary>Gets or sets a value indicating whether the Requests hub shows Sonarr and Radarr downloads.</summary>
+    public bool DownloadsEnabled { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether viewers who aren't administrators see every download. Off: only titles
+    /// they can see in Seerr's requests.
+    /// </summary>
+    public bool DownloadsShowAll { get; set; }
+
+    /// <summary>Gets or sets a value indicating whether administrators get Sonarr and Radarr links and tags on detail pages.</summary>
+    public bool ArrLinksEnabled { get; set; }
+
+    /// <summary>Gets or sets the Sonarr address administrators open in their browser, when it differs from <see cref="SonarrUrl"/>.</summary>
+    public string SonarrPublicUrl { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets the Radarr address administrators open in their browser, when it differs from <see cref="RadarrUrl"/>.</summary>
+    public string RadarrPublicUrl { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets a value indicating whether detail pages show ratings from MDBList.</summary>
+    public bool RatingsEnabled { get; set; }
+
+    /// <summary>Gets or sets the MDBList API key. Stays on the server.</summary>
+    public string MdbListApiKey { get; set; } = string.Empty;
+
+    /// <summary>Gets or sets a value indicating whether titles on a viewer's Seerr watchlist are marked as liked (their Jellyfin watchlist).</summary>
+    public bool WatchlistFromSeerr { get; set; }
+
+    /// <summary>Gets or sets a value indicating whether titles a viewer likes in Jellyfin are added to their Seerr watchlist.</summary>
+    public bool WatchlistToSeerr { get; set; }
+
+    /// <summary>Gets or sets a value indicating whether viewers get the Catch Up page.</summary>
+    public bool CatchUpEnabled { get; set; }
+
+    /// <summary>Gets or sets a value indicating whether Catch Up choices are logged for administrators.</summary>
+    public bool CatchUpLogEnabled { get; set; }
 }

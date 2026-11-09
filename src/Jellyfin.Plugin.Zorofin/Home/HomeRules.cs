@@ -249,4 +249,21 @@ public static class HomeRules
 
     private static string Normalize(string text) =>
         Separators.Replace(text.Normalize(NormalizationForm.FormKC).ToLowerInvariant(), " ").Trim();
+
+    /// <summary>
+    /// Popular this week from play history: movies and shows (an episode counts for its show) ranked by watch time,
+    /// counting only plays the anonymous totals would count.
+    /// </summary>
+    /// <param name="plays">Plays in the window.</param>
+    /// <returns>Title ids, most watched first.</returns>
+    public static IReadOnlyList<Guid> PopularTitles(IEnumerable<Stats.PlayEvent> plays) =>
+        plays.Where(p => p.ItemType is "Movie" or "Episode"
+                && p.Seconds >= Stats.PlayStatsStore.MinimumPlay.TotalSeconds
+                && p.Seconds <= Stats.PlayStatsStore.MaximumPlay.TotalSeconds
+                && p.TitleId != Guid.Empty)
+            .GroupBy(p => p.TitleId)
+            .Select(g => (Id: g.Key, Seconds: g.Sum(p => (long)p.Seconds), Plays: g.Count()))
+            .OrderByDescending(t => t.Seconds).ThenByDescending(t => t.Plays).ThenBy(t => t.Id)
+            .Select(t => t.Id)
+            .ToList();
 }

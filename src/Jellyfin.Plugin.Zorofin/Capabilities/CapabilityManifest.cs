@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json.Serialization;
 using Jellyfin.Plugin.Zorofin.Configuration;
 
@@ -33,6 +34,27 @@ public sealed record CapabilityManifest(
 
     /// <summary>The announcement banner at /Zorofin/Announcement.</summary>
     public const int AnnouncementsVersion = 1;
+
+    /// <summary>
+    /// Features the Zorofin apps knew before the plugin existed, all at version 1. A server that still serves them
+    /// itself can keep listing them (<see cref="PluginConfiguration.LegacyAppFeatures"/>); the plugin serves none.
+    /// </summary>
+    public static readonly IReadOnlyList<string> LegacyFeatureNames = new[]
+    {
+        "support", "notifications", "requests", "homeRows", "liveArtwork",
+        "enhancedSettings", "accountApprovals", "notificationSettings", "liveTVAvailability",
+    };
+
+    /// <summary>Reads the operator's older app features, keeping only known names, in the order of <see cref="LegacyFeatureNames"/>.</summary>
+    /// <param name="value">Comma-separated names.</param>
+    /// <returns>The known names that were listed.</returns>
+    public static IReadOnlyList<string> ParseLegacyFeatures(string? value)
+    {
+        var listed = new HashSet<string>(
+            (value ?? string.Empty).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
+            StringComparer.Ordinal);
+        return LegacyFeatureNames.Where(listed.Contains).ToArray();
+    }
 
     /// <summary>
     /// Builds the manifest. Only enabled, fully configured modules are listed; listing is not authorization,
@@ -69,6 +91,13 @@ public sealed record CapabilityManifest(
         foreach (var (name, feature) in companionFeatures ?? new Dictionary<string, CapabilityFeature>())
         {
             features.TryAdd(name, feature);
+        }
+
+        // Older apps only understand version 1 of these and stop asking the server's own adapter once this
+        // manifest exists, so a listed name wins over the plugin's or the companion's newer version.
+        foreach (var name in ParseLegacyFeatures(config.LegacyAppFeatures))
+        {
+            features[name] = new CapabilityFeature(1, true);
         }
 
         return new CapabilityManifest(1, features);

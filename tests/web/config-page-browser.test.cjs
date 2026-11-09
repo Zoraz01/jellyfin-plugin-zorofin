@@ -88,13 +88,22 @@ const tab = (page, id) => page.click(`.zf-tab[data-tab="${id}"]`);
 
     // Tabs in setup order; companion parts without a step of their own get a tab too.
     assert.deepEqual(await page.$$eval('.zf-tab', n => n.map(t => t.dataset.tab)),
-      ['overview', 'connect', 'requests', 'alerts', 'livetv', 'foryou', 'home', 'announce', 'look', 'mod-sportsEvents']);
+      ['overview', 'connect', 'requests', 'alerts', 'livetv', 'foryou', 'home', 'announce', 'extras', 'look', 'mod-sportsEvents']);
     assert.equal(await page.getAttribute('.zf-tab[data-tab="overview"]', 'aria-selected'), 'true');
     assert.equal(await page.getAttribute('.zf-tab[data-tab="livetv"] .zf-step', 'class'), 'zf-step ok');
     assert.equal(await page.getAttribute('.zf-tab[data-tab="foryou"] .zf-step', 'class'), 'zf-step warn');
     assert.match(await page.textContent('#zfOverall'), /1 step needs attention/);
     // Overview points at the first step that needs something.
     assert.match(await page.textContent('.zf-next'), /Next: For you/);
+    // Explainers: closed by default, plain text, and the overview names the plugins to keep.
+    const explain = '.zf-explain[data-explain="overview"]';
+    assert.equal(await page.getAttribute(explain, 'open'), null);
+    assert.equal(await page.isVisible(explain + ' .zf-explain-body'), false);
+    await page.click(explain + ' summary');
+    assert.equal(await page.isVisible(explain + ' .zf-explain-body'), true);
+    const overviewText = await page.textContent(explain);
+    for (const name of ['TheTVDB', 'TheSportsDB', 'Open Subtitles', 'Intro Skipper']) assert.ok(overviewText.includes(name), name);
+    assert.match(await page.getAttribute(explain + ' a', 'href'), /docs\/SETUP\.md$/);
     if (shots) await page.screenshot({ path: path.join(shots, 'desktop-overview.png'), fullPage: true });
 
     // Connect: one Seerr for both, secrets never shown, only changed companion values sent.
@@ -106,10 +115,16 @@ const tab = (page, id) => page.click(`.zf-tab[data-tab="${id}"]`);
     assert.equal(await page.locator('[data-section="connections"] input').count(), 3, 'Seerr is not asked for twice');
     await page.fill('[data-section="seerr"] input[type="password"]', 'seerr-key');
     await page.fill('[data-section="connections"] input[type="text"]', 'Movie Night');
+    // Older apps: off by default; the switched-on features are saved in the plugin's order.
+    assert.equal(await page.locator('[data-section="legacyApps"] input[type="checkbox"]').count(), 9);
+    assert.equal(await page.locator('[data-section="legacyApps"] input[type="checkbox"]:checked').count(), 0);
+    await page.click('[data-section="legacyApps"] .zf-checkrow:has-text("Home rows from this server")');
+    await page.click('[data-section="legacyApps"] .zf-checkrow:has-text("Support")');
     await page.click('.zf-actions button:has-text("Save")');
     await page.waitForSelector('.zf-result li.ok');
     let log = await sent(page);
     const pluginSave = log.find(x => x[0] === 'PLUGIN');
+    assert.equal(pluginSave[2].LegacyAppFeatures, 'support,homeRows');
     assert.equal(pluginSave[2].SeerrUrl, 'http://seerr:5055');
     assert.equal(pluginSave[2].SeerrApiKey, 'seerr-key');
     assert.equal(pluginSave[2].CompanionSecret, 'x'.repeat(40), 'untouched secret is kept');
@@ -245,11 +260,37 @@ const tab = (page, id) => page.click(`.zf-tab[data-tab="${id}"]`);
     await page.waitForSelector('.zf-result li.ok');
     assert.equal((await sent(page)).filter(x => x[0] === 'PLUGIN').pop()[2].AnnouncementRevision, 1);
 
+    // Extras: Media Bar and Jellyfin Enhanced replacements, each off until switched on; secrets never shown.
+    await tab(page, 'extras');
+    if (shots) await page.screenshot({ path: path.join(shots, 'desktop-extras.png'), fullPage: true });
+    assert.equal(await page.locator('.zf-panel[data-panel="extras"] input[type="checkbox"]:checked').count(), 0);
+    assert.match(await page.textContent('[data-section="arr"]'), /Add Sonarr, Radarr or both/);
+    await page.click('[data-section="banner"] .zf-checkrow:has-text("Play trailers") input');
+    await page.fill('[data-section="banner"] textarea', 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
+    await page.click('[data-section="arr"] .zf-checkrow:has-text("Calendar") input');
+    await page.fill('[data-section="arr"] .zf-field:has-text("Sonarr address") >> nth=0 >> input', 'http://sonarr:8989');
+    await page.fill('[data-section="ratings"] input[type="password"]', 'mdb-key');
+    await page.click('.zf-actions button:has-text("Save")');
+    await page.waitForSelector('.zf-result li.ok');
+    const extras = (await sent(page)).filter(x => x[0] === 'PLUGIN').pop()[2];
+    assert.equal(extras.HomeBannerTrailers, true);
+    assert.equal(extras.HomeBannerItemIds, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
+    assert.equal(extras.CalendarEnabled, true);
+    assert.equal(extras.SonarrUrl, 'http://sonarr:8989');
+    assert.equal(extras.MdbListApiKey, 'mdb-key');
+    assert.equal(await page.getAttribute('.zf-tab[data-tab="extras"] .zf-step', 'class'), 'zf-step ok');
+
+    // Every setup tab has a short "How this works" note.
+    for (const id of ['connect', 'requests', 'alerts', 'livetv', 'foryou', 'home', 'announce', 'extras', 'look']) {
+      await tab(page, id);
+      assert.equal(await page.locator(`.zf-panel-intro .zf-explain[data-explain="${id}"] summary`).textContent(), 'How this works', id);
+    }
+
     // Arrow keys move between tabs.
     await tab(page, 'look');
     await page.focus('.zf-tab[data-tab="look"]');
     await page.keyboard.press('ArrowLeft');
-    assert.equal(await page.getAttribute('.zf-tab[data-tab="announce"]', 'aria-selected'), 'true');
+    assert.equal(await page.getAttribute('.zf-tab[data-tab="extras"]', 'aria-selected'), 'true');
     assert.deepEqual(errors, []);
 
     // Phone width: tabs scroll, fields stack, nothing overflows the page.

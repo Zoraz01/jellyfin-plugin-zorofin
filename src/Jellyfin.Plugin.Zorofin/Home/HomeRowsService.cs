@@ -80,11 +80,13 @@ public class HomeRowsService
     /// <param name="preferences">Display preferences.</param>
     /// <param name="liveTv">Live TV.</param>
     /// <param name="stats">Popular-this-week totals.</param>
+    /// <param name="history">Play history.</param>
     /// <param name="seerrUsers">Seerr user map.</param>
     /// <param name="upstream">Seerr client.</param>
-    public HomeRowsService(ILibraryManager library, IUserDataManager userData, ITVSeriesManager tv, IDtoService dto, IDisplayPreferencesManager preferences, ILiveTvManager liveTv, PlayStatsStore stats, SeerrUserDirectory seerrUsers, UpstreamClient upstream)
+    /// <param name="hides">Titles viewers removed from Continue Watching.</param>
+    public HomeRowsService(ILibraryManager library, IUserDataManager userData, ITVSeriesManager tv, IDtoService dto, IDisplayPreferencesManager preferences, ILiveTvManager liveTv, PlayStatsStore stats, PlayHistoryStore history, SeerrUserDirectory seerrUsers, UpstreamClient upstream, ContinueWatchingHides hides)
     {
-        _services = new HomeServices(library, userData, tv, dto, preferences, liveTv, stats, seerrUsers, upstream);
+        _services = new HomeServices(library, userData, tv, dto, preferences, liveTv, stats, history, seerrUsers, upstream, hides);
     }
 
     /// <summary>The rows this server builds: every catalog row the operator didn't switch off, and only rows whose module is on.</summary>
@@ -95,7 +97,7 @@ public class HomeRowsService
         ArgumentNullException.ThrowIfNull(config);
         var off = (config.HomeRowsOff ?? string.Empty).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         var wanted = HomeBuilder.Catalog.Select(r => r.Id).Except(off, StringComparer.Ordinal).ToHashSet(StringComparer.Ordinal);
-        if (!config.PlayStatsEnabled)
+        if (!config.PlayStatsEnabled && !config.PlayHistoryEnabled)
         {
             wanted.Remove("popular");
         }

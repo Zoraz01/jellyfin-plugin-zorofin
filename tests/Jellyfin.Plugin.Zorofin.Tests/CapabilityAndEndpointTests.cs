@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Jellyfin.Plugin.Zorofin;
 using Jellyfin.Plugin.Zorofin.Capabilities;
 using Jellyfin.Plugin.Zorofin.Configuration;
@@ -28,6 +29,33 @@ public class CapabilityAndEndpointTests
 
         config.RequestsEnabled = false;
         Assert.False(CapabilityManifest.Build(config).Features.ContainsKey("requests"));
+    }
+
+    [Fact]
+    public void LegacyAppFeaturesAreListedAtVersionOneAndWin()
+    {
+        var config = new PluginConfiguration
+        {
+            RequestsEnabled = true,
+            SeerrUrl = "http://seerr:5055",
+            SeerrApiKey = "key",
+            HomeRowsEnabled = true,
+            LegacyAppFeatures = " support, requests ,homeRows,unknown,,support",
+        };
+        var features = CapabilityManifest.Build(config, new Dictionary<string, CapabilityFeature> { ["support"] = new(3, true) }).Features;
+        Assert.Equal(new CapabilityFeature(1, true), features["support"]);
+        Assert.Equal(new CapabilityFeature(1, true), features["requests"]);
+        Assert.Equal(new CapabilityFeature(1, true), features["homeRows"]);
+        Assert.Equal(new CapabilityFeature(CapabilityManifest.HomeSectionsVersion, true), features["homeSections"]);
+        Assert.False(features.ContainsKey("unknown"));
+        Assert.Equal(new[] { "support", "requests", "homeRows" }, CapabilityManifest.ParseLegacyFeatures(config.LegacyAppFeatures));
+    }
+
+    [Fact]
+    public void NoLegacyAppFeaturesByDefault()
+    {
+        Assert.Empty(CapabilityManifest.ParseLegacyFeatures(new PluginConfiguration().LegacyAppFeatures));
+        Assert.Empty(CapabilityManifest.ParseLegacyFeatures(null));
     }
 
     [Fact]

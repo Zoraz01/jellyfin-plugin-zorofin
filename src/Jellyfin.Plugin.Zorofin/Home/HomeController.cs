@@ -3,6 +3,7 @@ using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.Zorofin.Requests;
+using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Net;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -19,16 +20,70 @@ public class HomeController : ControllerBase
 {
     private readonly HomeRowsService _service;
     private readonly IAuthorizationContext _authorization;
+    private readonly ILibraryManager _library;
+    private readonly ContinueWatchingHides _hides;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="HomeController"/> class.
     /// </summary>
     /// <param name="service">Home builder.</param>
     /// <param name="authorization">Jellyfin authorization context.</param>
-    public HomeController(HomeRowsService service, IAuthorizationContext authorization)
+    /// <param name="library">Library manager.</param>
+    /// <param name="hides">Titles viewers removed from Continue Watching.</param>
+    public HomeController(HomeRowsService service, IAuthorizationContext authorization, ILibraryManager library, ContinueWatchingHides hides)
     {
         _service = service;
         _authorization = authorization;
+        _library = library;
+        _hides = hides;
+    }
+
+    /// <summary>
+    /// Removes a movie or show from the viewer's Continue Watching. Progress is kept; it comes back when they play it
+    /// again. An episode removes its whole show.
+    /// </summary>
+    /// <param name="itemId">Movie or episode id.</param>
+    /// <returns>No content.</returns>
+    [HttpPost("ContinueWatching/{itemId:guid}/Hide")]
+    public Task<ActionResult> Hide([FromRoute] System.Guid itemId) => ChangeHidden(itemId, true);
+
+    /// <summary>Undoes <see cref="Hide"/>.</summary>
+    /// <param name="itemId">Movie or episode id.</param>
+    /// <returns>No content.</returns>
+    [HttpDelete("ContinueWatching/{itemId:guid}/Hide")]
+    public Task<ActionResult> Unhide([FromRoute] System.Guid itemId) => ChangeHidden(itemId, false);
+
+    private async Task<ActionResult> ChangeHidden(System.Guid itemId, bool hide)
+    {
+        var info = await _authorization.GetAuthorizationInfo(HttpContext).ConfigureAwait(false);
+        if (info is not { IsAuthenticated: true, IsApiKey: false, User: { } user })
+        {
+            return Unauthorized();
+        }
+
+        if (Plugin.Instance?.Configuration?.HomeRowsEnabled != true)
+        {
+            return NotFound();
+        }
+
+        var item = _library.GetItemById(itemId);
+        if (item is null || !item.IsVisibleStandalone(user))
+        {
+            return NotFound();
+        }
+
+        var key = item is MediaBrowser.Controller.Entities.TV.Episode episode && episode.SeriesId != System.Guid.Empty ? episode.SeriesId : item.Id;
+        if (hide)
+        {
+            _hides.Hide(user.Id, key, System.DateTime.UtcNow);
+        }
+        else
+        {
+            _hides.Restore(user.Id, key);
+        }
+
+        _service.Forget(user.Id);
+        return NoContent();
     }
 
     /// <summary>The seven app rows, in the same shape as the older /support/home/rows feed.</summary>

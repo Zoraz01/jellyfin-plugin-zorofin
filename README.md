@@ -4,6 +4,11 @@ Optional server features for Zorofin apps. Install it on a Jellyfin server, swit
 on the modules you want, and Zorofin apps signed in to that server pick them up
 automatically. Without it, Zorofin still works as a plain Jellyfin client.
 
+**Setting up a server?** Start with [the setup guide](docs/SETUP.md). It covers
+installing the plugin and the optional companion, every Dashboard tab, how the
+two fit together, replacing other Jellyfin plugins, and troubleshooting. This
+README is the technical reference.
+
 Status: **pre-release (0.1.0)**. Not yet published to a plugin repository. Zorofin
 apps need the `requests` version 2 support planned for the first update after 1.0
 before they use the Requests module.
@@ -28,6 +33,7 @@ its maintainer.
 | Home rows | Home tab: Zorofin Home rows, one switch per row | nothing (Requests and Popular this week add their rows) | `GET /Zorofin/Home/Sections`, `GET /Zorofin/Home/Rows` |
 | Play history | Record play history (Activity page) | nothing | `/Zorofin/Admin/Activity/*` (administrators and API keys) |
 | Seerr jobs | Next season requests; Tell Seerr about new arrivals | Seerr address and key | none (background) |
+| Extras | Extras tab, one switch per feature | Sonarr/Radarr for Calendar, Downloads and admin links; an MDBList key for ratings; Seerr for watchlist sync | `/Zorofin/Extras/*`, `/Zorofin/Arr/*` |
 | Announcement | Announcement tab | nothing | `GET /Zorofin/Announcement`, `POST /Zorofin/Announcement/Dismiss` |
 | Companion bridge | Companion URL and secret | an optional Zorofin companion service | `GET`/`POST /Zorofin/Companion/{module}/*` |
 
@@ -227,6 +233,27 @@ and key (not the Requests switch).
   quiet for two minutes (configurable), and never more than ten minutes after
   the first, so requests show as available right away.
 
+### Extras
+
+These replace Media Bar and the Jellyfin Enhanced features most servers use, so
+a server can run with only the Zorofin plugin, the companion and the data
+plugins the Overview tab checks for (TheTVDB, TheSportsDB, Open Subtitles,
+Intro Skipper). Each is off until switched on in the Extras tab. The web side
+lives in the companion web pack.
+
+| Feature | Route | Notes |
+| --- | --- | --- |
+| Which extras are on | `GET /Zorofin/Extras` | Signed-in viewers; the web pack reads it once every 5 minutes |
+| Home banner trailers and titles | `GET /Zorofin/Extras/Trailer/{youTubeId}` | Where the studio intro ends, from SponsorBlock, asked by the server and cached a week |
+| Ratings | `GET /Zorofin/Extras/Ratings/{itemId}` | MDBList, with the operator's key; an episode or season uses its show; cached a day, last answer kept if MDBList is down |
+| Catch Up log | `POST`/`GET /Zorofin/Extras/CatchUp/Log` | GET is administrators only; JSONL, about 10 MB at most |
+| Plugins Zorofin needs | `GET /Zorofin/Extras/Prerequisites` | Administrators; shown on the Overview tab |
+| Calendar | `GET /Zorofin/Arr/Calendar?start=yyyy-MM-dd&days=28` | Up to 62 days; links titles already on the server |
+| Downloads | `GET /Zorofin/Arr/Downloads` | Viewers see downloads of their own Seerr requests unless "Everyone sees every download" is on; no paths, clients or indexers are sent |
+| Sonarr / Radarr links | `GET /Zorofin/Arr/Item/{itemId}` | Administrators only |
+| Remove from Continue Watching | `POST`/`DELETE /Zorofin/Home/ContinueWatching/{itemId}/Hide` | Needs Home rows; progress is kept and the title comes back when it's played again |
+| Watchlist sync | none (background, every 30 minutes) | Seerr watchlist ↔ the viewer's Likes; removals carry over only when both directions are on, and a title that left the library is never removed from Seerr |
+
 ### Companion bridge
 
 Optional. When a companion URL and shared secret (32+ characters) are set, the
@@ -299,9 +326,18 @@ restart. Optionally delete `<jellyfin data>/zorofin/`.
 **Recover:** if Jellyfin fails to start after an install, delete the plugin
 folder and restart.
 
-Do not install this on a server whose Zorofin apps still rely on the legacy
-support adapter's capabilities until the plugin advertises the same features.
-See `docs/ZOROFIN_BACKEND_PLAN.md` in the Zorofin repository.
+**Servers that already run their own Zorofin support service** (such as the
+reference server): apps stop asking that service's `/support/capabilities` once
+`/Zorofin/Capabilities` answers. Before installing, plan to switch on the
+features it serves under Connect → **Older Zorofin apps** (stored as
+`LegacyAppFeatures`, for example
+`support,notifications,requests,homeRows,liveArtwork,enhancedSettings,accountApprovals,notificationSettings,liveTVAvailability`).
+Each listed feature is advertised at version 1 and wins over the plugin's own
+version, so apps made before the plugin keep working: `requests` 1 keeps them
+on Jellyfin Enhanced and `homeRows` 1 on `/support/home/rows`, while the web
+client still uses `/Zorofin/Home/Sections`. The plugin serves none of these
+routes itself. Untick a feature once its replacement is live and the apps that
+need it are updated. A new server leaves them all off.
 
 ## Smoke test performed
 

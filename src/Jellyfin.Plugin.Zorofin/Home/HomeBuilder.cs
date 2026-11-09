@@ -22,6 +22,11 @@ public interface IHomeSource
     /// <returns>Entries.</returns>
     IReadOnlyList<HomeEntry> NextUp(int limit);
 
+    /// <summary>Whether the viewer removed this movie or show from Continue Watching and hasn't played it since.</summary>
+    /// <param name="entry">The movie or episode.</param>
+    /// <returns>True when hidden.</returns>
+    bool HiddenFromContinueWatching(HomeEntry entry) => false;
+
     /// <summary>Movies, newest added first.</summary>
     /// <param name="limit">Most to return.</param>
     /// <returns>Entries.</returns>
@@ -120,18 +125,18 @@ public static class HomeBuilder
     public static readonly IReadOnlyList<(string Id, string Title, HomeRowPlacement Placement)> Catalog = new[]
     {
         ("continue-watching", "Continue Watching", HomeRowPlacement.Pinned),
-        ("requests-ready", "My requests", HomeRowPlacement.Pinned),
+        ("requests-ready", "My Requests", HomeRowPlacement.Pinned),
         ("new-episodes", "New episodes for you", HomeRowPlacement.Personal),
         ("short-movies", "Watch in 90 minutes", HomeRowPlacement.Personal),
         ("showcase", "4K / HDR showcase", HomeRowPlacement.Personal),
         ("curated", "Seasonal picks", HomeRowPlacement.Personal),
-        ("popular", "Popular this week", HomeRowPlacement.Personal),
+        ("popular", "Popular on Zorofin this week", HomeRowPlacement.Personal),
         ("sports", "Your teams / starting soon", HomeRowPlacement.Personal),
         ("because-you-watched", "Because you watched", HomeRowPlacement.Personal),
         ("favorites", "Favorites", HomeRowPlacement.Library),
-        ("recently-added-movies", "Recently added movies", HomeRowPlacement.Library),
-        ("recently-added-shows", "Recently added shows", HomeRowPlacement.Library),
-        ("watch-again", "Watch again", HomeRowPlacement.Library),
+        ("recently-added-movies", "Recently Added Movies", HomeRowPlacement.Library),
+        ("recently-added-shows", "Recently Added Shows", HomeRowPlacement.Library),
+        ("watch-again", "Watch Again", HomeRowPlacement.Library),
     };
 
     /// <summary>Builds the rows. A row that fails is marked unavailable; it never takes Home down with it.</summary>
@@ -162,7 +167,9 @@ public static class HomeBuilder
                 switch (id)
                 {
                     case "continue-watching":
-                        rows.Add(Row(id, title, placement, HomeRules.ContinueWatching(source.Resumable(40), source.NextUp(40))));
+                        rows.Add(Row(id, title, placement, HomeRules.ContinueWatching(
+                            source.Resumable(40).Where(e => !source.HiddenFromContinueWatching(e)),
+                            source.NextUp(40).Where(e => !source.HiddenFromContinueWatching(e)))));
                         break;
                     case "requests-ready":
                         var requests = await source.AvailableRequestsAsync(cancellationToken).ConfigureAwait(false);

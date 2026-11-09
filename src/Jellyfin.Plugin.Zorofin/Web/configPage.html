@@ -127,6 +127,19 @@
             #ZorofinConfigPage .zf-steprow strong { display: block; font-size: 15px; }
             #ZorofinConfigPage .zf-steprow small { color: var(--zf-muted); font-size: 13px; }
             #ZorofinConfigPage .zf-next { margin-bottom: 12px; padding: 14px 18px; border-radius: var(--zf-radius); background: var(--zf-raised); }
+            #ZorofinConfigPage .zf-explain { margin: 10px 0 0; max-width: 68ch; color: var(--zf-muted); font-size: 14px; }
+            #ZorofinConfigPage .zf-explain summary { display: inline-flex; align-items: center; gap: 6px; color: var(--zf-green); font-weight: 600; cursor: pointer; list-style: none; }
+            #ZorofinConfigPage .zf-explain summary::-webkit-details-marker { display: none; }
+            #ZorofinConfigPage .zf-explain summary::before { content: ""; flex: none; width: 7px; height: 7px; margin: 0 2px 3px 1px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(-45deg); transition: transform .15s; }
+            #ZorofinConfigPage .zf-explain[open] summary::before { transform: rotate(45deg); margin: 0 2px 5px 1px; }
+            #ZorofinConfigPage .zf-explain summary:focus-visible { outline: 2px solid var(--zf-green); outline-offset: 2px; border-radius: 4px; }
+            #ZorofinConfigPage .zf-explain-body { margin-top: 8px; padding: 14px 16px; border-radius: 12px; background: var(--zf-panel); }
+            #ZorofinConfigPage .zf-explain-body p { margin: 0 0 8px; color: var(--zf-muted); }
+            #ZorofinConfigPage .zf-explain-body ul { margin: 0 0 8px; padding-left: 18px; }
+            #ZorofinConfigPage .zf-explain-body li { margin: 2px 0; }
+            #ZorofinConfigPage .zf-explain-body li strong { color: var(--zf-text); font-weight: 600; }
+            #ZorofinConfigPage .zf-explain-body a { color: var(--zf-green); font-weight: 600; text-decoration: none; }
+            #ZorofinConfigPage .zf-explain-body a:hover { text-decoration: underline; }
             #ZorofinConfigPage .zf-loading { padding: 48px 0; text-align: center; color: var(--zf-muted); }
             @media (max-width: 640px) {
                 #ZorofinConfigPage .zf { padding: 12px 12px 48px; }
@@ -168,8 +181,109 @@
                     { id: 'foryou', title: 'For you', section: 'recommendations', summary: 'Recommended to request, and Popular this week.', heading: 'For you', intro: 'Rows on Home that help viewers find something to watch.' },
                     { id: 'home', title: 'Home', summary: 'Zorofin Home rows, in place of Home Screen Sections.', heading: 'Home', intro: 'Zorofin builds every Home row for each viewer: Continue Watching, their requests, rows picked for them and your library shelves. Empty rows stay hidden. The web client shows them with the Zorofin look on; the apps will use them in a later update.' },
                     { id: 'announce', title: 'Announcement', summary: 'A message in everyone\'s Notifications.', heading: 'Announcement', intro: 'A short message for everyone on this server. It shows in Notifications in the web client now, and in the Zorofin apps once they support it.' },
+                    { id: 'extras', title: 'Extras', summary: 'Trailers, Calendar, Downloads, ratings, Catch Up.', heading: 'Extras', intro: 'The extras that used to need Media Bar and Jellyfin Enhanced. Each one is off until you turn it on. The web client shows them with the Zorofin look on.' },
                     { id: 'look', title: 'Look & player', section: 'webUi', summary: 'The Zorofin look in Jellyfin\'s web client.', heading: 'Look and player', intro: 'Give Jellyfin\'s own web client the Zorofin look and the Zorofin player. Viewers reload their browser tab to see a change.' }
                 ];
+
+                // Features apps knew before the plugin, in the plugin's order (CapabilityManifest.LegacyFeatureNames).
+                var LEGACY_FEATURES = [
+                    ['support', 'Support'], ['notifications', 'Notifications'], ['requests', 'Requests (through Jellyfin Enhanced)'],
+                    ['homeRows', 'Home rows from this server'], ['liveArtwork', 'Live TV artwork'], ['enhancedSettings', 'Extra settings'],
+                    ['accountApprovals', 'Account approvals'], ['notificationSettings', 'Notification settings'], ['liveTVAvailability', 'Live TV availability']
+                ];
+
+                // Optional "How this works" notes under each tab's intro, closed by default.
+                // Plain text only; a line starting with "- " is a list item, "**x** rest" bolds x.
+                var GUIDE_URL = 'https://github.com/Zoraz01/jellyfin-plugin-zorofin/blob/main/docs/SETUP.md';
+                var EXPLAIN = {
+                    overview: { title: 'How Zorofin fits together', lines: [
+                        'Zorofin has two parts. This plugin runs inside Jellyfin. The companion is a small, optional Docker container next to it. Apps only ever talk to Jellyfin, and only show what you turn on here.',
+                        '- **Plugin on its own:** Requests, Home rows, Popular this week, the announcement and play history.',
+                        '- **With the companion:** request alerts, a better Live TV guide, Recommended to request and the Zorofin look on the web.',
+                        'Keep these Jellyfin plugins installed alongside Zorofin. It builds on them:',
+                        '- **TheTVDB:** show and episode details and artwork.',
+                        '- **TheSportsDB:** sports details and artwork for Live TV.',
+                        '- **Open Subtitles:** missing subtitles for the apps and player.',
+                        '- **Intro Skipper:** Skip Intro and Next Episode.',
+                        'Home Screen Sections, Media Bar and Playback Reporting can go once the matching tab is on, and the Extras tab covers Media Bar\'s trailers and the Jellyfin Enhanced features most servers use. Keep Jellyfin Enhanced until the coming app update, because today\'s apps request through it.'
+                    ] },
+                    connect: { lines: [
+                        'Fill this in first. Every other tab uses it.',
+                        '- **Companion address:** how Jellyfin reaches the companion. Use http://zorofin-companion:9310 when both are containers on the same network, or http://localhost:9310 when Jellyfin runs on the computer itself.',
+                        '- **Companion secret:** the bridge secret the companion\'s new-secrets script made. The two use it to sign every request, so viewers\' Jellyfin sign-ins are never passed on.',
+                        '- **Seerr:** entered once here and used by Requests, alerts and recommendations. Import your Jellyfin users in Seerr first.',
+                        'Press Test to check the companion can reach Jellyfin and Seerr. If the companion stops, Jellyfin keeps working and its features switch off.'
+                    ] },
+                    requests: { lines: [
+                        'Viewers browse, search and request, and each request goes to Seerr as that viewer, so their own Seerr permissions, quotas and auto-approval apply.',
+                        'Today this works on the web through the Requests hub (Look & player). The Zorofin apps move to it in a coming app update; until then they request through Jellyfin Enhanced, so keep it installed for now.',
+                        'Your Seerr, Radarr and Sonarr keys stay on this server. Viewers never see other people\'s requests, emails or file paths.',
+                        'A viewer without a Seerr account is told why they can\'t request. Import them in Seerr to fix it.',
+                        'The two jobs in "Keep Seerr up to date" only need the Seerr address and key. Turn off Jellyfin Enhanced\'s versions of them at the same time, so nothing is requested twice.'
+                    ] },
+                    alerts: { lines: [
+                        'When a requested title arrives, the viewer who asked gets an email, a push or both. An email address is only used after they confirm a code.',
+                        'Coming: the screen where viewers turn alerts on is still being built. Set this up now and alerts start the day it ships.',
+                        '- **Email:** your own Resend account.',
+                        '- **Push:** your own ntfy server.',
+                        'In Seerr, add a webhook for Request Available to http://zorofin-companion:9310/v1/hooks/seerr with the header "Bearer" plus the companion\'s webhook secret. The setup guide has the payload to paste.'
+                    ] },
+                    livetv: { lines: [
+                        'The companion reads your XMLTV guide and hands Jellyfin a better copy: game matchups in titles, posters and matchup cards where art is missing, and logos for channels without one. If your guide source breaks, Jellyfin keeps the last good guide.',
+                        'After saving, point Jellyfin at the new guide: Dashboard → Live TV → TV Guide Data Providers → XMLTV, then http://zorofin-companion:9310/v1/public/liveTvGuide/<your token>/guide.xml.',
+                        'Each artwork source is optional. With all of them off, nothing leaves your server.'
+                    ] },
+                    foryou: { lines: [
+                        '- **Popular this week** counts minutes watched per title across the server for 35 days. It never stores who watched.',
+                        '- **Recommended to request** suggests movies a viewer might want, from what they finished, favorited and requested. It shows once they have finished three movies. Coming: the apps and web don\'t show this row yet.',
+                        'AI ranking is optional. With your own key, the AI only reorders the picks and sees titles, never names or emails. If it fails, the standard order is used.'
+                    ] },
+                    home: { lines: [
+                        'Zorofin builds each viewer\'s Home from their own libraries, parental limits and watch history, so the Home Screen Sections plugin isn\'t needed. Empty rows stay hidden.',
+                        'Switch on Home here, check Home in the web client for a couple of accounts, then uninstall Home Screen Sections. Turning Home off brings Jellyfin\'s own Home straight back.',
+                        'The web client shows these rows when Look & player is on.'
+                    ] },
+                    announce: { lines: [
+                        'One message for everyone, at the top of Notifications with a dot on the bell until it is read. It never covers Home. It shows in the web client today, and in the Zorofin apps after a coming update.',
+                        'Use a start and end time for planned work. Editing the message shows it again to everyone.'
+                    ] },
+                    extras: { lines: [
+                        'These replace Media Bar and the Jellyfin Enhanced features most servers use. Each is off until you switch it on, and viewers see it on the web after a reload.',
+                        '- **Home banner:** trailers play muted behind each title, with a Trailer button. Add your own list of titles, or leave it empty for a random pick.',
+                        '- **Calendar and Downloads:** read from Sonarr and Radarr with the keys you enter here. Viewers only see downloads they requested unless you share them all.',
+                        '- **Ratings:** from MDBList, with your own free key. Each title is looked up at most once a day.',
+                        '- **Watchlist:** keeps each viewer\'s Seerr watchlist and the titles they like in Jellyfin in step. Turn off Jellyfin Enhanced\'s watchlist sync first.',
+                        '- **Catch Up:** one unwatched title at a time to play, save, mark seen or skip.',
+                        'The pause screen, auto-pause and Remove from Continue Watching need nothing here. They come with Look & player and Home.'
+                    ] },
+                    look: { lines: [
+                        'The plugin adds one script to Jellyfin\'s web page, and the companion supplies the theme and player, so JavaScript Injector and custom CSS aren\'t needed. Remove old theme scripts so nothing is drawn twice.',
+                        '- **Home banner** replaces the Media Bar plugin. It steps aside while Media Bar is installed.',
+                        '- **Requests hub** uses this plugin\'s Requests, so Jellyfin Enhanced isn\'t needed for it.',
+                        'Playback, subtitles and quality stay Jellyfin\'s. Turn this off, or stop the companion, and the web client is plain Jellyfin on the next reload.'
+                    ] }
+                };
+                function explainer(id) {
+                    var info = EXPLAIN[id];
+                    if (!info) return null;
+                    var box = el('details', 'zf-explain'), body = el('div', 'zf-explain-body'), list = null;
+                    box.dataset.explain = id;
+                    box.appendChild(el('summary', null, info.title || 'How this works'));
+                    info.lines.forEach(function (line) {
+                        var item = line.indexOf('- ') === 0, text = item ? line.slice(2) : line, node = el(item ? 'li' : 'p');
+                        var bold = /^\*\*(.+?)\*\*(.*)$/.exec(text);
+                        if (bold) add(node, el('strong', null, bold[1]), document.createTextNode(bold[2]));
+                        else node.textContent = text;
+                        if (item) { if (!list) { list = el('ul'); body.appendChild(list); } list.appendChild(node); }
+                        else { list = null; body.appendChild(node); }
+                    });
+                    var more = el('p'), link = el('a', null, 'Read the full setup guide');
+                    link.href = GUIDE_URL; link.target = '_blank'; link.rel = 'noopener';
+                    more.appendChild(link);
+                    body.appendChild(more);
+                    box.appendChild(body);
+                    return box;
+                }
 
                 function el(tag, className, text) {
                     var node = document.createElement(tag);
@@ -230,6 +344,9 @@
                             return p.HomeRowsEnabled ? { kind: 'ok', text: 'On' } : { kind: 'off', text: 'Off' };
                         case 'announce':
                             return announcementStatus(p);
+                        case 'extras':
+                            var count = EXTRA_SWITCHES.filter(function (k) { return p[k]; }).length;
+                            return count ? { kind: 'ok', text: count + ' on' } : { kind: 'off', text: 'Off' };
                         case 'look':
                             if (!p.WebUiEnabled) return { kind: 'off', text: 'Off' };
                             var look = moduleStatus(section('webUi'));
@@ -546,6 +663,105 @@
                         list.appendChild(row);
                     });
                     panel.appendChild(list);
+                    prerequisitesCard(panel);
+                }
+
+                // The plugins Zorofin builds on. Checked live, so a missing one shows here.
+                function prerequisitesCard(panel) {
+                    var box = card('Plugins Zorofin needs', 'Keep these installed from Jellyfin\'s catalogue. Zorofin uses their data and doesn\'t replace them.');
+                    box.dataset.section = 'prerequisites';
+                    var list = el('div', 'zf-steps');
+                    box.appendChild(list);
+                    panel.appendChild(box);
+                    request('GET', 'Zorofin/Extras/Prerequisites').then(function (r) {
+                        (r.plugins || []).forEach(function (pl) {
+                            var row = el('div', 'zf-steprow'), text = el('div');
+                            row.dataset.plugin = pl.name;
+                            add(text, el('strong', null, pl.name), el('small', null, pl.why));
+                            var st = pl.state === 'ok' ? { kind: 'ok', text: 'Installed' } : pl.state === 'inactive' ? { kind: 'warn', text: 'Installed, not running' } : { kind: 'warn', text: 'Not installed' };
+                            add(row, stepMark(st.kind), text, chip(st));
+                            if (pl.state === 'missing') {
+                                var go = el('a', 'zf-btn small', 'Install'); go.href = '#/dashboard/plugins/catalog';
+                                row.appendChild(go);
+                            }
+                            list.appendChild(row);
+                        });
+                    }, function () { list.appendChild(el('small', 'zf-help', 'Couldn\'t check installed plugins. Update the Zorofin plugin and reload.')); });
+                }
+
+                // ---- Extras (Media Bar and Jellyfin Enhanced replacements) ----
+                var EXTRA_SWITCHES = ['HomeBannerTrailers', 'CalendarEnabled', 'DownloadsEnabled', 'ArrLinksEnabled', 'RatingsEnabled', 'WatchlistFromSeerr', 'WatchlistToSeerr', 'CatchUpEnabled'];
+                function extrasPanel(panel) {
+                    var p = state.plugin, all = [];
+                    function group(title, description, options, section) {
+                        var box = card(title, description);
+                        box.dataset.section = section;
+                        var items = options.map(function (o) {
+                            if (o.type === 'secret') o.set = !!p[o.key]; else o.value = p[o.key];
+                            var f = field(o); all.push(f); return f;
+                        });
+                        box.appendChild(fieldsBox(items));
+                        panel.appendChild(box);
+                        return box;
+                    }
+                    group('Home banner', 'Replaces Media Bar. Shown when the Home banner is on in Look & player.', [
+                        { key: 'HomeBannerTrailers', type: 'boolean', label: 'Play trailers behind the banner', help: 'Each title\'s YouTube trailer plays muted behind it after a moment, and a Trailer button plays it with sound. Skipped on slow connections and for viewers who ask for less motion.' },
+                        { key: 'HomeBannerSkipIntros', type: 'boolean', label: 'Skip trailer intros', help: 'Starts each trailer after its studio intro, using SponsorBlock. Your server asks SponsorBlock, not viewers\' browsers.' },
+                        { key: 'HomeBannerItemIds', type: 'textarea', label: 'Banner titles', placeholder: 'One item id per line, in order', help: 'Optional. Open a title in Jellyfin and copy the id from its address. Leave empty for a random pick of unwatched titles. Up to 30.' }
+                    ], 'banner');
+                    var arrReady = !!((p.SonarrUrl && p.SonarrApiKey) || (p.RadarrUrl && p.RadarrApiKey));
+                    var arr = group('Calendar and Downloads', 'Upcoming episodes and movie releases, and what\'s downloading, from Sonarr and Radarr.', [
+                        { key: 'CalendarEnabled', type: 'boolean', label: 'Calendar', help: 'A Calendar page in the account menu and side menu, for everyone.' },
+                        { key: 'DownloadsEnabled', type: 'boolean', label: 'Downloads in the Requests hub', help: 'Progress, time left and quality for each download.' },
+                        { key: 'DownloadsShowAll', type: 'boolean', label: 'Everyone sees every download', help: 'Off: viewers see only titles from their own requests. Administrators always see everything.' },
+                        { key: 'ArrLinksEnabled', type: 'boolean', label: 'Sonarr and Radarr links for administrators', help: 'An "Open in Sonarr" or "Open in Radarr" link and the title\'s tags on its details page. Only administrators see them.' },
+                        { key: 'SonarrUrl', type: 'url', label: 'Sonarr address', placeholder: 'http://sonarr:8989', help: 'Shared with Requests.' },
+                        { key: 'SonarrApiKey', type: 'secret', label: 'Sonarr API key', help: 'Sonarr → Settings → General.' },
+                        { key: 'RadarrUrl', type: 'url', label: 'Radarr address', placeholder: 'http://radarr:7878', help: 'Shared with Requests.' },
+                        { key: 'RadarrApiKey', type: 'secret', label: 'Radarr API key', help: 'Radarr → Settings → General.' },
+                        { key: 'SonarrPublicUrl', type: 'url', label: 'Sonarr address in your browser', placeholder: 'https://sonarr.example.com', help: 'Optional, for the admin links when it differs from the address above.' },
+                        { key: 'RadarrPublicUrl', type: 'url', label: 'Radarr address in your browser', placeholder: 'https://radarr.example.com', help: 'Optional, for the admin links.' }
+                    ], 'arr');
+                    if (!arrReady) arr.insertBefore(notice('Add Sonarr, Radarr or both below to use these.', 'info'), arr.children[1]);
+                    group('Ratings', 'IMDb, Rotten Tomatoes, Metacritic, Letterboxd and more on each movie and show, from MDBList. Answers are kept for a day, so each title costs at most one lookup a day.', [
+                        { key: 'RatingsEnabled', type: 'boolean', label: 'Show ratings on details pages' },
+                        { key: 'MdbListApiKey', type: 'secret', label: 'MDBList API key', help: 'Free at mdblist.com → Preferences. Stays on your server.' }
+                    ], 'ratings');
+                    var watch = group('Watchlist', 'Keeps each viewer\'s Seerr watchlist and their Jellyfin watchlist (the titles they like) in step, every 30 minutes. With both on, removing a title on one side removes it on the other.', [
+                        { key: 'WatchlistFromSeerr', type: 'boolean', label: 'Seerr watchlist to Jellyfin' },
+                        { key: 'WatchlistToSeerr', type: 'boolean', label: 'Jellyfin watchlist to Seerr' }
+                    ], 'watchlist');
+                    if (!seerrReady()) watch.appendChild(notice('Needs your Seerr address and key.', null, 'Add Seerr', 'connect'));
+                    var catchUp = group('Catch Up', 'A page that shows one unwatched movie or show at a time. Viewers play it, save it for later, mark it seen or skip it.', [
+                        { key: 'CatchUpEnabled', type: 'boolean', label: 'Catch Up page' },
+                        { key: 'CatchUpLogEnabled', type: 'boolean', label: 'Keep a log for administrators', help: 'Who chose what, and when. Kept on this server, about 10 MB at most.' }
+                    ], 'catchup');
+                    if (p.CatchUpEnabled && p.CatchUpLogEnabled) {
+                        var logBtn = el('button', 'zf-btn small', 'Show recent choices'); logBtn.type = 'button';
+                        var logBox = el('div', 'zf-fields');
+                        logBtn.addEventListener('click', function () {
+                            logBox.textContent = 'Loading…';
+                            request('GET', 'Zorofin/Extras/CatchUp/Log?take=50').then(function (r) {
+                                logBox.textContent = '';
+                                var rows = (r.summary || []).map(function (u) { return el('div', 'zf-help', u.user + ': ' + u.total + ' choices (' + u.watch + ' played, ' + u.later + ' later, ' + u.watched + ' seen, ' + u.skip + ' skipped)'); });
+                                if (!rows.length) rows = [el('div', 'zf-help', 'No choices yet.')];
+                                rows.forEach(function (row) { logBox.appendChild(row); });
+                            }, function () { logBox.textContent = 'Couldn\'t load the log.'; });
+                        });
+                        add(catchUp, logBtn, logBox);
+                    }
+                    actions(panel, {
+                        collect: function () {
+                            var plugin = {};
+                            all.forEach(function (item) {
+                                var v = valueOf(item), k = item.option.key;
+                                if (item.option.type === 'secret') { if (v) plugin[k] = v; return; }
+                                if (v === undefined || v === null) return;
+                                if (item.option.type === 'boolean' ? v !== !!p[k] : v !== (p[k] || '')) plugin[k] = v;
+                            });
+                            return { plugin: plugin };
+                        }
+                    });
                 }
 
                 function connectPanel(panel) {
@@ -581,6 +797,18 @@
                         panel.appendChild(notice('Jellyfin can\'t reach the companion at this address with this secret. Check both, then save.'));
                     }
 
+                    // Older apps: for a server that already runs its own Zorofin support service.
+                    var legacyOn = (p.LegacyAppFeatures || '').split(',').map(function (x) { return x.trim(); }).filter(Boolean);
+                    var legacyItems = LEGACY_FEATURES.map(function (f) {
+                        var item = field({ key: 'legacy-' + f[0], type: 'boolean', label: f[1], value: legacyOn.indexOf(f[0]) >= 0 });
+                        item.feature = f[0];
+                        return item;
+                    });
+                    var legacy = card('Older Zorofin apps', 'Only for a server that already runs its own Zorofin support service. Apps made before this plugin keep the features switched on here, served by that service. Leave them all off on a new server.');
+                    legacy.dataset.section = 'legacyApps';
+                    legacy.appendChild(fieldsBox(legacyItems));
+                    panel.appendChild(legacy);
+
                     actions(panel, {
                         test: conn ? function () {
                             return testSection('connections', connectionsBody());
@@ -593,6 +821,8 @@
                             var su = valueOf(items.seerrUrl), sk = valueOf(items.seerrKey);
                             if (su !== (p.SeerrUrl || '')) plugin.SeerrUrl = su;
                             if (sk) plugin.SeerrApiKey = sk;
+                            var legacyNext = legacyItems.filter(function (item) { return valueOf(item); }).map(function (item) { return item.feature; }).join(',');
+                            if (legacyNext !== legacyOn.filter(function (n) { return LEGACY_FEATURES.some(function (f) { return f[0] === n; }); }).join(',')) plugin.LegacyAppFeatures = legacyNext;
                             return {
                                 plugin: plugin,
                                 reloadFirst: 'CompanionUrl' in plugin || 'CompanionSecret' in plugin,
@@ -916,6 +1146,8 @@
                     var sec = step.section ? section(step.section) : null;
                     add(intro, el('h2', null, step.id === 'overview' ? 'Your setup' : step.heading || step.title),
                         el('p', null, step.id === 'overview' ? 'Turn on what you want. The apps only show what this server has.' : step.intro || (sec && sec.description) || ''));
+                    var note = explainer(step.id);
+                    if (note) intro.appendChild(note);
                     panel.appendChild(intro);
                     if (step.id === 'overview') overviewPanel(panel);
                     else if (step.id === 'connect') connectPanel(panel);
@@ -923,6 +1155,7 @@
                     else if (step.id === 'foryou') forYouPanel(panel);
                     else if (step.id === 'home') homePanel(panel);
                     else if (step.id === 'look') lookPanel(panel);
+                    else if (step.id === 'extras') extrasPanel(panel);
                     else if (step.id === 'announce') announcePanel(panel);
                     else modulePanel(panel, step);
                     panelsEl.textContent = '';

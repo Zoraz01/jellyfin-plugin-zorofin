@@ -18,6 +18,7 @@ using MediaBrowser.Common.Extensions;
 using MediaBrowser.Controller;
 using MediaBrowser.Controller.Dto;
 using MediaBrowser.Controller.Entities;
+using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.LiveTv;
@@ -58,9 +59,11 @@ public sealed class JellyfinHomeSource : IHomeSource
     private readonly IDisplayPreferencesManager _preferences;
     private readonly ILiveTvManager _liveTv;
     private readonly PlayStatsStore _stats;
+    private readonly PlayHistoryStore _history;
     private readonly SeerrUserDirectory _seerrUsers;
     private readonly UpstreamClient _upstream;
     private readonly PluginConfiguration _config;
+    private readonly ContinueWatchingHides? _hides;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="JellyfinHomeSource"/> class.
@@ -78,7 +81,9 @@ public sealed class JellyfinHomeSource : IHomeSource
         _dto = services.Dto;
         _preferences = services.Preferences;
         _liveTv = services.LiveTv;
+        _hides = services.Hides;
         _stats = services.Stats;
+        _history = services.History;
         _seerrUsers = services.SeerrUsers;
         _upstream = services.Upstream;
         _config = config;
@@ -168,13 +173,25 @@ public sealed class JellyfinHomeSource : IHomeSource
     /// <inheritdoc />
     public IReadOnlyList<HomeEntry>? Popular(int days, int limit)
     {
-        if (!_config.PlayStatsEnabled)
+        // Play history (with imported Playback Reporting plays) ranks the row when it's on; the anonymous
+        // totals only start counting when they're switched on, so they're the fallback.
+        IEnumerable<Guid> ranked;
+        if (_config.PlayHistoryEnabled)
+        {
+            var now = DateTime.UtcNow;
+            ranked = HomeRules.PopularTitles(_history.Between(now.AddDays(-days), now));
+        }
+        else if (_config.PlayStatsEnabled)
+        {
+            ranked = _stats.Top(days, DateTime.UtcNow).Select(t => t.TitleId);
+        }
+        else
         {
             return null;
         }
 
-        var items = _stats.Top(days, DateTime.UtcNow)
-            .Select(t => _library.GetItemById(t.TitleId))
+        var items = ranked
+            .Select(id => _library.GetItemById(id))
             .Where(i => i is not null && i.IsVisibleStandalone(_user))
             .Take(limit).Cast<BaseItem>().ToList();
         return Entries(items);
@@ -313,14 +330,23 @@ public sealed class JellyfinHomeSource : IHomeSource
         }
 
         var matches = new List<(HomeEntry, DateTime?)>();
-        foreach (var request in ReadAvailable(result.Body))
+        var available = ReadAvailable(result.Body);
+        // One library read, matched in memory: Jellyfin 12.4 ignores HasAnyProviderId on item queries, so a
+        // per-request provider-id query with a small limit returned unrelated items and never matched.
+        // Jellyfin only loads provider ids when the query asks for that field, so ask for it.
+        var index = available.Count == 0 ? null : IndexByTmdb(Query(q =>
         {
-            var found = Query(q =>
+            q.IncludeItemTypes = new[] { BaseItemKind.Movie, BaseItemKind.Series };
+            q.DtoOptions = WithProviderIds;
+        }));
+        foreach (var request in available)
+        {
+            var key = (request.Type == "movie" ? BaseItemKind.Movie : BaseItemKind.Series, request.TmdbId.ToString(CultureInfo.InvariantCulture));
+            if (index is null || !index.TryGetValue(key, out var found))
             {
-                q.IncludeItemTypes = new[] { request.Type == "movie" ? BaseItemKind.Movie : BaseItemKind.Series };
-                q.HasAnyProviderId = new Dictionary<string, string> { ["Tmdb"] = request.TmdbId.ToString(CultureInfo.InvariantCulture) };
-                q.Limit = 4;
-            }).Where(i => i.ProviderIds is not null && i.ProviderIds.TryGetValue("Tmdb", out var tmdb) && tmdb == request.TmdbId.ToString(CultureInfo.InvariantCulture)).ToList();
+                continue;
+            }
+
             foreach (var entry in Entries(found, formats: request.Is4K && request.Type == "movie"))
             {
                 if (!request.Is4K || request.Type != "movie" || entry.Formats.Contains("4K"))
@@ -336,6 +362,31 @@ public sealed class JellyfinHomeSource : IHomeSource
         }
 
         return matches;
+    }
+
+    /// <summary>Groups movies and shows by their TMDB id, for matching Seerr requests to library items.</summary>
+    /// <param name="items">Movies and series.</param>
+    /// <returns>Items per (kind, TMDB id).</returns>
+    public static Dictionary<(BaseItemKind Kind, string Tmdb), List<BaseItem>> IndexByTmdb(IEnumerable<BaseItem> items)
+    {
+        var index = new Dictionary<(BaseItemKind, string), List<BaseItem>>();
+        foreach (var item in items)
+        {
+            var kind = item is Series ? BaseItemKind.Series : item is Movie ? BaseItemKind.Movie : (BaseItemKind?)null;
+            if (kind is null || item.ProviderIds is null || !item.ProviderIds.TryGetValue("Tmdb", out var tmdb) || string.IsNullOrEmpty(tmdb))
+            {
+                continue;
+            }
+
+            if (!index.TryGetValue((kind.Value, tmdb), out var list))
+            {
+                index[(kind.Value, tmdb)] = list = new List<BaseItem>();
+            }
+
+            list.Add(item);
+        }
+
+        return index;
     }
 
     /// <summary>The viewer's requests Seerr marks as available or partly available (status 4 or 5).</summary>
@@ -423,8 +474,13 @@ public sealed class JellyfinHomeSource : IHomeSource
 
     private static DateTime Utc(DateTime value) => value.Kind == DateTimeKind.Unspecified ? DateTime.SpecifyKind(value, DateTimeKind.Utc) : value.ToUniversalTime();
 
+    /// <inheritdoc />
+    public bool HiddenFromContinueWatching(HomeEntry entry) => _hides is not null && _hides.IsHidden(_user.Id, entry);
+
     private static bool Playable(BaseItem item) =>
         !item.IsVirtualItem && item.LocationType != LocationType.Virtual && (item is not Video video || !video.IsPlaceHolder);
+
+    private static readonly DtoOptions WithProviderIds = new(false) { EnableImages = false, Fields = new[] { ItemFields.ProviderIds } };
 
     private IReadOnlyList<BaseItem> Query(Action<InternalItemsQuery> setup)
     {
@@ -481,8 +537,10 @@ public sealed class JellyfinHomeSource : IHomeSource
 /// <param name="Preferences">Display preferences (followed teams).</param>
 /// <param name="LiveTv">Live TV.</param>
 /// <param name="Stats">Popular-this-week totals.</param>
+/// <param name="History">Play history.</param>
 /// <param name="SeerrUsers">Jellyfin to Seerr user map.</param>
 /// <param name="Upstream">Seerr client.</param>
+/// <param name="Hides">Titles viewers removed from Continue Watching.</param>
 public sealed record HomeServices(
     ILibraryManager Library,
     IUserDataManager UserData,
@@ -491,5 +549,7 @@ public sealed record HomeServices(
     IDisplayPreferencesManager Preferences,
     ILiveTvManager LiveTv,
     PlayStatsStore Stats,
+    PlayHistoryStore History,
     SeerrUserDirectory SeerrUsers,
-    UpstreamClient Upstream);
+    UpstreamClient Upstream,
+    ContinueWatchingHides? Hides = null);
