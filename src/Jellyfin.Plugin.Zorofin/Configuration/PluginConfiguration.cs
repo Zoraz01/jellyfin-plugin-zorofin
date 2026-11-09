@@ -167,4 +167,10 @@ public class PluginConfiguration : BasePluginConfiguration
 
     /// <summary>Gets or sets a value indicating whether Catch Up choices are logged for administrators.</summary>
     public bool CatchUpLogEnabled { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether viewers can send the server owner a message from the Zorofin apps,
+    /// answered from the Support tab. Today's apps also show Recommended to request only while this is on.
+    /// </summary>
+    public bool SupportInboxEnabled { get; set; }
 }

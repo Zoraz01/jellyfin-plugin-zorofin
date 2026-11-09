@@ -6,6 +6,7 @@ using Jellyfin.Plugin.Zorofin.Extras;
 using Jellyfin.Plugin.Zorofin.Home;
 using Jellyfin.Plugin.Zorofin.Requests;
 using Jellyfin.Plugin.Zorofin.Stats;
+using Jellyfin.Plugin.Zorofin.Support;
 using Jellyfin.Plugin.Zorofin.Web;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Controller;
@@ -54,6 +55,8 @@ public class ServiceRegistrator : IPluginServiceRegistrator
         serviceCollection.AddHostedService<SeerrAutomations>();
         serviceCollection.AddSingleton(provider => new AnnouncementDismissals(
             Path.Combine(provider.GetRequiredService<IApplicationPaths>().DataPath, "zorofin", "announcement-dismissals.json")));
+        serviceCollection.AddSingleton(provider => new SupportInbox(
+            Path.Combine(provider.GetRequiredService<IApplicationPaths>().DataPath, "zorofin", "support-inbox.json")));
         serviceCollection.AddTransient<IStartupFilter, WebUiStartupFilter>();
     }
 }

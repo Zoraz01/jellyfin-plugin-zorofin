@@ -88,7 +88,7 @@ const tab = (page, id) => page.click(`.zf-tab[data-tab="${id}"]`);
 
     // Tabs in setup order; companion parts without a step of their own get a tab too.
     assert.deepEqual(await page.$$eval('.zf-tab', n => n.map(t => t.dataset.tab)),
-      ['overview', 'connect', 'requests', 'alerts', 'channels', 'livetv', 'sports', 'foryou', 'home', 'announce', 'extras', 'look']);
+      ['overview', 'connect', 'requests', 'alerts', 'channels', 'livetv', 'sports', 'foryou', 'home', 'announce', 'support', 'extras', 'look']);
     assert.equal(await page.getAttribute('.zf-tab[data-tab="overview"]', 'aria-selected'), 'true');
     assert.equal(await page.getAttribute('.zf-tab[data-tab="livetv"] .zf-step', 'class'), 'zf-step ok');
     assert.equal(await page.getAttribute('.zf-tab[data-tab="foryou"] .zf-step', 'class'), 'zf-step warn');
@@ -281,7 +281,7 @@ const tab = (page, id) => page.click(`.zf-tab[data-tab="${id}"]`);
     assert.equal(await page.getAttribute('.zf-tab[data-tab="extras"] .zf-step', 'class'), 'zf-step ok');
 
     // Every setup tab has a short "How this works" note.
-    for (const id of ['connect', 'requests', 'alerts', 'livetv', 'foryou', 'home', 'announce', 'extras', 'look']) {
+    for (const id of ['connect', 'requests', 'alerts', 'livetv', 'foryou', 'home', 'announce', 'support', 'extras', 'look']) {
       await tab(page, id);
       assert.equal(await page.locator(`.zf-panel-intro .zf-explain[data-explain="${id}"] summary`).textContent(), 'How this works', id);
     }

@@ -93,6 +93,26 @@ public sealed record CapabilityManifest(
             features.TryAdd(name, feature);
         }
 
+        // Features today's store apps know only by their version-1 names. The plugin answers their /support/*
+        // addresses (AppCompatibilityController), from its own inbox and announcement and from the companion.
+        // Note the companion's "notifications" module shares its name with the apps' Notifications inbox; the
+        // plugin's /support/notifications answers it, so listing it is safe.
+        var companionAlerts = companionFeatures is not null && companionFeatures.TryGetValue("notifications", out var alerts) && alerts.Enabled;
+        if (config.SupportInboxEnabled)
+        {
+            features["support"] = new CapabilityFeature(1, true);
+        }
+
+        if (config.SupportInboxEnabled || config.AnnouncementEnabled || companionAlerts)
+        {
+            features["notifications"] = new CapabilityFeature(1, true);
+        }
+
+        if (companionAlerts)
+        {
+            features["notificationSettings"] = new CapabilityFeature(1, true);
+        }
+
         // Older apps only understand version 1 of these and stop asking the server's own adapter once this
         // manifest exists, so a listed name wins over the plugin's or the companion's newer version.
         foreach (var name in ParseLegacyFeatures(config.LegacyAppFeatures))

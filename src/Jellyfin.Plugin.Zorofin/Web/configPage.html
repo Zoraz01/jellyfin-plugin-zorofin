@@ -99,6 +99,13 @@
             #ZorofinConfigPage .zf-switch input:disabled { cursor: not-allowed; }
             #ZorofinConfigPage .zf-switch input:disabled + i { opacity: .45; }
             #ZorofinConfigPage .zf-switch input:focus-visible + i { outline: 2px solid var(--zf-green); outline-offset: 2px; }
+            #ZorofinConfigPage .zf-muted { color: var(--zf-muted); margin: 4px 0; }
+            #ZorofinConfigPage .zf-tickets { display: grid; gap: 12px; margin-top: 12px; }
+            #ZorofinConfigPage .zf-ticket h3 { margin: 0; font-size: 16px; }
+            #ZorofinConfigPage .zf-ticket.closed { opacity: .7; }
+            #ZorofinConfigPage .zf-ticket-text, #ZorofinConfigPage .zf-ticket-reply { white-space: pre-wrap; margin: 8px 0; }
+            #ZorofinConfigPage .zf-ticket-reply { color: var(--zf-muted); border-left: 3px solid var(--zf-faint); padding-left: 10px; }
+            #ZorofinConfigPage .zf-ticket textarea { width: 100%; box-sizing: border-box; margin-top: 8px; padding: 10px 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,.12); background: var(--zf-bg); color: var(--zf-text); font: inherit; font-size: 15px; resize: vertical; }
             #ZorofinConfigPage .zf-chip { font-size: 13px; font-weight: 600; color: var(--zf-faint); white-space: nowrap; }
             #ZorofinConfigPage .zf-chip.ok { color: var(--zf-green); }
             #ZorofinConfigPage .zf-chip.warn { color: var(--zf-amber); }
@@ -181,8 +188,9 @@
                     { id: 'livetv', title: 'Live TV', section: 'liveTvGuide', summary: 'A better guide, with artwork and logos.', heading: 'Live TV guide' },
                     { id: 'sports', title: 'Sports', section: 'sportsEvents', summary: 'Real fixtures on your event channels, and Live now.', heading: 'Sports', intro: 'Pick your leagues. Zorofin reads their real schedules, puts each game on the event channel that carries it, hides empty event channels and gives the apps a Live now list.' },
                     { id: 'foryou', title: 'For you', section: 'recommendations', summary: 'Recommended to request, and Popular this week.', heading: 'For you', intro: 'Rows on Home that help viewers find something to watch.' },
-                    { id: 'home', title: 'Home', summary: 'Zorofin Home rows, in place of Home Screen Sections.', heading: 'Home', intro: 'Zorofin builds every Home row for each viewer: Continue Watching, their requests, rows picked for them and your library shelves. Empty rows stay hidden. The web client shows them with the Zorofin look on; the apps will use them in a later update.' },
-                    { id: 'announce', title: 'Announcement', summary: 'A message in everyone\'s Notifications.', heading: 'Announcement', intro: 'A short message for everyone on this server. It shows in Notifications in the web client now, and in the Zorofin apps once they support it.' },
+                    { id: 'home', title: 'Home', summary: 'Zorofin Home rows, in place of Home Screen Sections.', heading: 'Home', intro: 'Zorofin builds every Home row for each viewer: Continue Watching, their requests, rows picked for them and your library shelves. Empty rows stay hidden. The web client shows them with the Zorofin look on, and the Zorofin apps (1.3 and later) read them from here.' },
+                    { id: 'announce', title: 'Announcement', summary: 'A message in everyone\'s Notifications.', heading: 'Announcement', intro: 'A short message for everyone on this server. It shows in Notifications in the web client and the Zorofin apps.' },
+                    { id: 'support', title: 'Support', summary: 'Messages from viewers.', heading: 'Support', intro: 'Viewers send you a short message from the Zorofin apps, such as a title that won\'t play. You reply here, and the reply shows in their Notifications.' },
                     { id: 'extras', title: 'Extras', summary: 'Trailers, Calendar, Downloads, ratings, Catch Up.', heading: 'Extras', intro: 'The extras that used to need Media Bar and Jellyfin Enhanced. Each one is off until you turn it on. The web client shows them with the Zorofin look on.' },
                     { id: 'look', title: 'Look & player', section: 'webUi', summary: 'The Zorofin look in Jellyfin\'s web client.', heading: 'Look and player', intro: 'Give Jellyfin\'s own web client the Zorofin look and the Zorofin player. Viewers reload their browser tab to see a change.' }
                 ];
@@ -200,7 +208,7 @@
                 var EXPLAIN = {
                     overview: { title: 'How Zorofin fits together', lines: [
                         'Zorofin has two parts. This plugin runs inside Jellyfin. The companion is a small, optional Docker container next to it. Apps only ever talk to Jellyfin, and only show what you turn on here.',
-                        '- **Plugin on its own:** Requests, Home rows, Popular this week, the announcement and play history.',
+                        '- **Plugin on its own:** Requests, Home rows, Popular this week, the announcement, Support messages and play history.',
                         '- **With the companion:** request alerts, a better Live TV guide, Recommended to request and the Zorofin look on the web.',
                         'Keep these Jellyfin plugins installed alongside Zorofin. It builds on them:',
                         '- **TheTVDB:** show and episode details and artwork.',
@@ -246,8 +254,13 @@
                         'The web client shows these rows when Look & player is on.'
                     ] },
                     announce: { lines: [
-                        'One message for everyone, at the top of Notifications with a dot on the bell until it is read. It never covers Home. It shows in the web client today, and in the Zorofin apps after a coming update.',
+                        'One message for everyone, at the top of Notifications with a dot on the bell until it is read. It never covers Home. It shows in the web client and the Zorofin apps.',
                         'Use a start and end time for planned work. Editing the message shows it again to everyone.'
+                    ] },
+                    support: { lines: [
+                        'Viewers find Support in the apps\' menu. They pick what went wrong, add a short description and, if they like, the title. Each viewer can send five messages an hour.',
+                        'Your reply goes to that viewer only, in Notifications, with a dot on the bell until they read it. Nothing is emailed and nothing leaves your server.',
+                        'Today\'s apps also show Recommended to request (For you tab) only while Support is on. A coming app update removes that link.'
                     ] },
                     extras: { lines: [
                         'These replace Media Bar and the Jellyfin Enhanced features most servers use. Each is off until you switch it on, and viewers see it on the web after a reload.',
@@ -346,6 +359,8 @@
                             return p.HomeRowsEnabled ? { kind: 'ok', text: 'On' } : { kind: 'off', text: 'Off' };
                         case 'announce':
                             return announcementStatus(p);
+                        case 'support':
+                            return p.SupportInboxEnabled ? { kind: 'ok', text: 'On' } : { kind: 'off', text: 'Off' };
                         case 'extras':
                             var count = EXTRA_SWITCHES.filter(function (k) { return p[k]; }).length;
                             return count ? { kind: 'ok', text: count + ' on' } : { kind: 'off', text: 'Off' };
@@ -1103,6 +1118,72 @@
                     });
                 }
 
+                function supportPanel(panel) {
+                    var p = state.plugin;
+                    var sw = toggle(!!p.SupportInboxEnabled, 'Let viewers message you');
+                    var head = el('div', 'zf-side'), mark = chip(p.SupportInboxEnabled ? { kind: 'ok', text: 'On' } : { kind: 'off', text: 'Off' });
+                    add(head, mark, sw.wrap);
+                    var box = card('Support messages', 'Shows Support in the Zorofin apps. Replies appear in the viewer\'s Notifications.', head);
+                    box.dataset.section = 'support';
+                    sw.input.addEventListener('change', function () {
+                        mark.textContent = sw.input.checked ? (p.SupportInboxEnabled ? 'On' : 'On after you save') : (p.SupportInboxEnabled ? 'Off after you save' : 'Off');
+                    });
+                    panel.appendChild(box);
+                    actions(panel, {
+                        collect: function () {
+                            return { plugin: sw.input.checked !== !!p.SupportInboxEnabled ? { SupportInboxEnabled: sw.input.checked } : {} };
+                        }
+                    });
+                    var inbox = card('Messages', 'Newest first.');
+                    var list = el('div', 'zf-tickets');
+                    list.appendChild(el('p', 'zf-muted', 'Loading…'));
+                    inbox.appendChild(list);
+                    panel.appendChild(inbox);
+                    function call(type, path, body) {
+                        return ApiClient.ajax({ type: type, url: ApiClient.getUrl(path), contentType: body ? 'application/json' : undefined, data: body ? JSON.stringify(body) : undefined });
+                    }
+                    function when(value) { var t = Date.parse(value || ''); return isFinite(t) ? new Date(t).toLocaleString() : ''; }
+                    function draw(tickets) {
+                        list.textContent = '';
+                        if (!tickets.length) { list.appendChild(el('p', 'zf-muted', p.SupportInboxEnabled ? 'No messages yet.' : 'No messages. Turn Support on to let viewers write to you.')); return; }
+                        tickets.forEach(function (t) {
+                            var item = el('article', 'zf-card zf-ticket' + (t.closed ? ' closed' : ''));
+                            var meta = (t.userName || 'A viewer') + ' · ' + when(t.createdAt) + (t.closed ? ' · Closed' : '');
+                            add(item, el('h3', null, t.issueType + (t.affectedMedia ? ': ' + t.affectedMedia : '')), el('p', 'zf-muted', meta), el('p', 'zf-ticket-text', t.description));
+                            if (t.reply) item.appendChild(el('p', 'zf-ticket-reply', 'Your reply' + (t.read ? ' (read)' : '') + ': ' + t.reply));
+                            var reply = el('textarea'); reply.maxLength = 1500; reply.rows = 3; reply.placeholder = t.reply ? 'Send a new reply' : 'Write a reply';
+                            reply.setAttribute('aria-label', 'Reply to ' + (t.userName || 'this viewer'));
+                            reply.className = 'emby-textarea';
+                            var bar = el('div', 'zf-actions'), status = el('span', 'zf-muted');
+                            var send = el('button', 'zf-btn primary small', 'Send reply'); send.type = 'button';
+                            var close = el('button', 'zf-btn small', t.closed ? 'Reopen' : 'Close'); close.type = 'button';
+                            var remove = el('button', 'zf-btn small', 'Delete'); remove.type = 'button';
+                            send.addEventListener('click', function () {
+                                var text = reply.value.trim();
+                                if (!text) { status.textContent = 'Write a reply first.'; return; }
+                                status.textContent = 'Sending…';
+                                call('POST', 'Zorofin/Admin/Support/Tickets/' + t.id + '/Reply', { message: text }).then(refresh, function () { status.textContent = 'Couldn\'t send. Try again.'; });
+                            });
+                            close.addEventListener('click', function () {
+                                call('POST', 'Zorofin/Admin/Support/Tickets/' + t.id + '/Closed?closed=' + (!t.closed)).then(refresh, function () { status.textContent = 'Couldn\'t change it. Try again.'; });
+                            });
+                            remove.addEventListener('click', function () {
+                                if (!window.confirm('Delete this message? This can\'t be undone.')) return;
+                                call('DELETE', 'Zorofin/Admin/Support/Tickets/' + t.id).then(refresh, function () { status.textContent = 'Couldn\'t delete. Try again.'; });
+                            });
+                            add(bar, send, close, remove, status);
+                            add(item, reply, bar);
+                            list.appendChild(item);
+                        });
+                    }
+                    function refresh() {
+                        return request('GET', 'Zorofin/Admin/Support/Tickets').then(function (r) { draw((r && r.tickets) || []); }, function () {
+                            list.textContent = ''; list.appendChild(el('p', 'zf-muted', 'Couldn\'t load messages.'));
+                        });
+                    }
+                    refresh();
+                }
+
                 // ---- Tabs ----
                 function allSteps() {
                     var known = {};
@@ -1159,6 +1240,7 @@
                     else if (step.id === 'look') lookPanel(panel);
                     else if (step.id === 'extras') extrasPanel(panel);
                     else if (step.id === 'announce') announcePanel(panel);
+                    else if (step.id === 'support') supportPanel(panel);
                     else modulePanel(panel, step);
                     panelsEl.textContent = '';
                     panelsEl.appendChild(panel);

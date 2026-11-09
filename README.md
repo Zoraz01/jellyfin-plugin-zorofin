@@ -35,6 +35,8 @@ its maintainer.
 | Seerr jobs | Next season requests; Tell Seerr about new arrivals | Seerr address and key | none (background) |
 | Extras | Extras tab, one switch per feature | Sonarr/Radarr for Calendar, Downloads and admin links; an MDBList key for ratings; Seerr for watchlist sync | `/Zorofin/Extras/*`, `/Zorofin/Arr/*` |
 | Announcement | Announcement tab | nothing | `GET /Zorofin/Announcement`, `POST /Zorofin/Announcement/Dismiss` |
+| Support inbox | Support tab | nothing | `POST /support/ticket`, `GET /support/notifications`, `POST /support/notifications/{id}/read`; `/Zorofin/Admin/Support/*` (administrators) |
+| Store-app addresses | follows Announcement, Support and the companion's modules | see below | `GET /support/announcement/me`, `GET /support/recommendations`, `GET`/`POST /support/request-alerts/*`, `GET`/`POST /Zorofin/Alerts/ConfirmEmail` (no sign-in) |
 | Companion bridge | Companion URL and secret | an optional Zorofin companion service | `GET`/`POST /Zorofin/Companion/{module}/*` |
 
 Everything is off on a fresh install, and the manifest advertises a module only
@@ -52,6 +54,34 @@ affected. Browsing and playback never depend on this plugin.
 `requests` is **version 2** because version 1 meant the older Jellyfin Enhanced
 proxy paths. Apps that only know version 1 hide Requests instead of calling
 routes that don't exist.
+
+### Addresses today's store apps use
+
+The released Zorofin apps (iOS and Apple TV 1.3, Android 200, LG and Samsung)
+read alert settings, Notifications, Support and Recommended to request from
+`/support/*`, the addresses a server's own support service answered before this
+plugin existed. The plugin answers them, so those apps get the features on any
+server, and advertises their version-1 names only when it can answer:
+
+| Name in `/Zorofin/Capabilities` | Listed when | Answered by |
+| --- | --- | --- |
+| `support` | Support tab is on | the plugin's Support inbox (`/support/ticket`); the apps also show Recommended to request only while this is listed |
+| `notifications` | Support or Announcement is on, or the companion runs `notifications` | `/support/notifications` (Support replies) and `/support/announcement/me` |
+| `notificationSettings` | the companion runs `notifications` | `/support/request-alerts`, forwarded to the companion's alert preferences |
+
+`/support/recommendations` forwards to the companion's `recommendations` feed
+and answers 404 when that module is off, which the apps treat as "no row".
+
+Email alerts need the viewer to confirm their address. Today's apps have no box
+for the code, so the companion's confirmation email also links to
+`/Zorofin/Alerts/ConfirmEmail` on this server (built from the companion's
+`ZOROFIN_APP_URL`, "Address viewers open" on the Connect tab). Opening the link
+only shows a button; pressing it confirms. The code expires in 30 minutes and
+locks after a few wrong tries.
+
+A server whose own support service sits in front of Jellyfin keeps serving
+`/support/*` itself; its `LegacyAppFeatures` list still wins in the manifest.
+Newer apps move to `/Zorofin/*` addresses.
 
 ### Requests
 
@@ -335,8 +365,10 @@ features it serves under Connect → **Older Zorofin apps** (stored as
 Each listed feature is advertised at version 1 and wins over the plugin's own
 version, so apps made before the plugin keep working: `requests` 1 keeps them
 on Jellyfin Enhanced and `homeRows` 1 on `/support/home/rows`, while the web
-client still uses `/Zorofin/Home/Sections`. The plugin serves none of these
-routes itself. Untick a feature once its replacement is live and the apps that
+client still uses `/Zorofin/Home/Sections`. A support service in front of
+Jellyfin keeps answering its own `/support/*` routes; the plugin's versions of
+some of them (see "Addresses today's store apps use") only answer when a request
+reaches Jellyfin. Untick a feature once its replacement is live and the apps that
 need it are updated. A new server leaves them all off.
 
 ## Smoke test performed

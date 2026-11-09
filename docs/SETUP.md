@@ -29,7 +29,7 @@ switch on the extras. Every feature is off until you turn it on.
 | --- | --- | --- |
 | What it is | A Jellyfin plugin (one DLL) | A small Docker container that runs next to Jellyfin |
 | Where you set it up | Dashboard → **Zorofin** | The same Dashboard page, once it is connected |
-| What it does | Requests through Seerr, Home rows, Popular this week, the server announcement, play history and the Activity page, Seerr background jobs | "Ready to watch" alerts, a better Live TV guide, recommendations to request (optional AI), the Zorofin look and player in Jellyfin's web app |
+| What it does | Requests through Seerr, Home rows, Popular this week, the server announcement, Support messages, play history and the Activity page, Seerr background jobs | "Ready to watch" alerts, a better Live TV guide, recommendations to request (optional AI), the Zorofin look and player in Jellyfin's web app |
 | License | GPL-3.0 | AGPL-3.0 |
 
 You can run the plugin on its own. Add the companion only for the features that
@@ -38,21 +38,23 @@ need it.
 ## Do I need the companion?
 
 Zorofin is in early release (0.1). The **Today** column says where each
-feature works now. "Coming" means the server side is built and the Zorofin
-apps or web pages that use it are still being finished.
+feature works now. "Apps" means the current Zorofin apps (1.3 and later); older
+versions need an update from their app store. "Coming" means the server side is
+built and the screen that uses it is still being finished.
 
 | Feature | What viewers get | Needs | Today |
 | --- | --- | --- | --- |
-| Requests | Browse, search and request movies and shows, then follow progress | Plugin, Seerr. Radarr and Sonarr are optional (download progress) | Web (Requests hub, with the companion). Apps: coming in an app update |
+| Requests | Browse, search and request movies and shows, then follow progress | Plugin, Seerr. Radarr and Sonarr are optional (download progress) | Apps, and the web (Requests hub, with the companion) |
 | Next season requests | The next season is requested for a viewer as they finish the current one | Plugin, Seerr | Works |
 | Seerr availability scan | Requests show as available as soon as a title arrives | Plugin, Seerr | Works |
-| Home rows | Continue Watching, My requests, rows picked for each viewer and library shelves | Plugin, and the companion for the web | Web. The apps already build the same rows themselves |
-| Popular this week | A row of what your server watched most over the past week | Plugin | Web Home row. Apps: coming |
-| Announcement | One message for everyone, at the top of Notifications | Plugin | Web. Apps: coming |
+| Home rows | Continue Watching, My requests, rows picked for each viewer and library shelves | Plugin, and the companion for the web | Apps and web |
+| Popular this week | A row of what your server watched most over the past week | Plugin | Apps and web, as a Home row (needs Home rows) |
+| Announcement | One message for everyone, at the top of Notifications | Plugin | Apps and web |
+| Support | Viewers send you a message from the apps; your reply shows in their Notifications | Plugin | Apps |
 | Play history and Activity page | Charts and a play log for administrators | Plugin | Works |
-| "Ready to watch" alerts | Email or push when a requested title arrives | Companion, Seerr webhook, your own Resend account (email) or ntfy server (push) | Coming: the alerts are sent, but the screen where viewers turn them on is still being built |
+| "Ready to watch" alerts | Email or push when a requested title arrives | Companion, Seerr webhook, your own Resend account (email) or ntfy server (push) | Apps (Notification settings). Web: coming |
 | Live TV guide | Matchup titles for games, artwork for shows and games, missing channel logos | Companion, Jellyfin Live TV with an XMLTV guide | Works (it improves Jellyfin's own guide, so every app sees it) |
-| Recommended to request | A personal row of movies a viewer might want to request | Companion, Seerr. An AI key is optional | Coming: the companion builds the row; the apps and web don't show it yet |
+| Recommended to request | A personal row of movies a viewer might want to request | Companion, Seerr. An AI key is optional | Apps, while Support is on (see [For you](#for-you)). Web: coming |
 | Zorofin look and player on the web | Jellyfin's web app looks and plays like the Zorofin apps, with a Home banner, Live TV pages and a Requests hub | Plugin and companion | Works |
 
 If the companion is stopped, Jellyfin keeps working as plain Jellyfin: the
@@ -81,7 +83,9 @@ companion's features switch off and the plugin's keep running.
   | **Intro Skipper** | Finds intros and credits, so the apps and the Zorofin player can show Skip Intro and jump to the next episode |
 
   Open Subtitles needs a free opensubtitles.com account, entered in its own
-  plugin settings.
+  plugin settings. Intro Skipper may not be in Jellyfin's built-in catalogue:
+  if you don't see it, add the plugin repository from Intro Skipper's own
+  README under Dashboard → Plugins → Repositories first.
 
 Pick a quiet time: installing the plugin needs one Jellyfin restart. Nothing
 else in this guide does.
@@ -133,8 +137,11 @@ Jellyfin and Seerr are on.
    `seerr-api-key` (Seerr → Settings → General). You can also enter these two
    keys in the Dashboard later instead.
 3. **Tell it where things are.** The defaults expect a Docker network named
-   `yams_network` with containers called `jellyfin` and `seerr`. Change any of
-   these in your stack's `.env`:
+   `yams_network` with containers called `jellyfin` and `seerr`. Most servers
+   use other names: `docker network ls` lists your networks, and
+   `docker inspect jellyfin --format '{{json .NetworkSettings.Networks}}'`
+   shows the one Jellyfin is on. The network must already exist. Put the
+   values that differ in a `.env` file next to `compose.yaml`:
 
    | Variable | Default | Change it when |
    | --- | --- | --- |
@@ -142,6 +149,17 @@ Jellyfin and Seerr are on.
    | `ZOROFIN_JELLYFIN_URL` | `http://jellyfin:8096` | Jellyfin has another name, or runs on the host |
    | `ZOROFIN_SEERR_URL` | `http://seerr:5055` | Seerr has another name, such as `http://jellyseerr:5055` |
    | `ZOROFIN_MODULES` | `notifications` | You want more modules: `notifications,liveTvGuide,recommendations,webUi` |
+
+   For example, Jellyfin on a network called `media` with every module:
+
+   ```sh
+   ZOROFIN_NETWORK=media
+   ZOROFIN_MODULES=notifications,liveTvGuide,recommendations,webUi
+   ```
+
+   Each module's own settings (email service, ntfy, guide address and so on)
+   are easiest to enter later in the Dashboard. You can also put them in
+   `companion.env` (copy `companion.env.example`).
 
 4. **Start it.** Either include it in your existing stack:
 
@@ -194,16 +212,18 @@ Where your companion and Seerr live. Every other tab uses these.
   once: the plugin and the companion both use them.
 - **Your server** (with the companion): the Jellyfin address and API key the
   companion uses for read-only lookups, the server name shown in emails and
-  alerts, and the address viewers open (links in alerts point there).
+  alerts, and the address viewers open (links in alerts point there, and so
+  does the button that confirms a viewer's email address, so use an address
+  viewers can reach).
 - **Older Zorofin apps:** leave every switch off. It only exists for servers
   that ran their own Zorofin support service before the plugin existed.
 
 ### Requests
 
-Viewers browse what's trending, search, and request movies and shows. Today
-that works on the web through the Requests hub (Look & player). The Zorofin
-apps switch to these Requests in an app update that is coming; until then they
-keep showing Requests only on servers that use Jellyfin Enhanced.
+Viewers browse what's trending, search, and request movies and shows, in the
+Zorofin apps and on the web through the Requests hub (Look & player). Zorofin
+apps older than 1.2 only show Requests on servers that use Jellyfin Enhanced;
+viewers on those versions need to update the app.
 
 - The plugin keeps your Seerr key on the server. For each viewer it finds their
   linked Seerr account and sends the request **as that viewer**, so Seerr's
@@ -233,9 +253,10 @@ When a requested title lands in your library, the viewer who asked for it gets
 an email, a push notification or both. An email address is used only after the
 viewer confirms a code sent to it.
 
-**Coming:** viewers turn alerts on from their own settings, and that screen in
-the apps and on the web is still being built. You can set up the server side
-now, so alerts start the day it ships.
+Viewers turn alerts on in the apps under **Notification settings**. Push works
+there straight away. For email, the viewer enters their address and gets an
+email with a **Confirm email alerts** button (and a 6-digit code), which opens a
+page on your Jellyfin server. The web client's settings screen is still coming.
 
 1. Turn on **Request alerts** and fill in at least one channel:
    - **Email:** a [Resend](https://resend.com) API key (or a compatible
@@ -302,8 +323,9 @@ Rows on Home that help viewers find something to watch.
   on your server or requested yet, based on what each viewer finished,
   favorited and requested. Candidates come from Seerr, so there's no extra
   key. A viewer needs at least three finished movies before the row shows.
-  - **Coming:** the companion builds this row today, but the apps and the web
-    don't show it yet.
+  - The apps show it under Requests. Today's apps only ask for it while
+    **Support** is on (Support tab), a quirk the next app update removes. The
+    web client doesn't show it yet.
   - **AI ranking** is optional and off by default. With your own Anthropic or
     OpenAI-compatible key (or a local model such as Ollama), the AI reorders
     the picks and adds a one-line reason. It only sees titles and overviews,
@@ -332,9 +354,9 @@ plugin.
 Each row has its own switch. Empty rows stay hidden. A viewer's Home is built
 at most once a minute and never shared with anyone else.
 
-The web shows these rows when the Zorofin look is on. With Home rows off,
-Jellyfin's own Home stays. The Zorofin apps already build the same rows on the
-device; reading them from the plugin comes in a later app update.
+The web shows these rows when the Zorofin look is on, and the Zorofin apps
+(1.3 and later) read them too. With Home rows off, Jellyfin's own Home stays,
+and the apps build their rows on the device.
 
 ### Announcement
 
@@ -342,13 +364,24 @@ One short message for everyone on the server: a kind (News, Good news, Heads
 up, Maintenance), a title, a message, an optional button, and optional start
 and end times. Viewers find it at the top of Notifications, with a dot on the
 bell until they read it. It is never a banner over Home. It shows in the web
-client today; the Zorofin apps will list it in their Notifications in a coming
-update.
+client and in the Zorofin apps' Notifications.
 
 - Marking it read on one device hides it on that account's other devices.
 - Editing it shows it again to everyone. **Show it again to viewers who read
   it** does the same without an edit.
 - The preview on the tab shows exactly what viewers will see.
+
+### Support
+
+Viewers open **Support** in the Zorofin apps, pick what went wrong (for example
+playback or a missing episode), write a short description and, if they like,
+name the title. It lands on the **Support** tab, newest first. Write a reply
+and press **Send reply**: it shows in that viewer's Notifications, with a dot on
+the bell until they read it. Close or delete a message when you're done.
+
+- Each viewer can send five messages an hour. The newest 500 are kept.
+- Nothing is emailed and nothing leaves your server.
+- This is a plain inbox. There is no automatic or AI help.
 
 ### Look & player (companion)
 
@@ -420,6 +453,7 @@ Seerr ──webhook (Bearer secret)───────────────
 | Popular this week (titles and minutes only) | `<jellyfin data>/zorofin/play-stats.json` | 35 days |
 | Play history (when on) | `<jellyfin data>/zorofin/play-history/` | 365 days by default |
 | Announcement dismissals (user id and announcement id) | `<jellyfin data>/zorofin/announcement-dismissals.json` | Last 50 per account |
+| Support messages and replies (user id and name, the message, your reply) | `<jellyfin data>/zorofin/support-inbox.json` | Newest 500 |
 | Companion settings and keys | Companion data folder, `settings.json` (mode 600) | Until changed |
 | Alert preferences, confirmed emails, delivery records | Companion data folder | Delivery records 30 days |
 | Guide artwork, sports art, uploaded logos | Companion data folder | Pruned automatically |
@@ -435,7 +469,7 @@ Jellyfin server uses for these jobs, so you can run fewer plugins:
 | Media Bar | Look & player → Home banner | The Zorofin banner steps aside while Media Bar is installed; uninstall Media Bar to see it |
 | Playback Reporting | Zorofin activity → Record play history | Import your history first (below), run both for a week, then uninstall Playback Reporting |
 | Jellyfin Enhanced: auto season requests, Seerr scans | Requests → Keep Seerr up to date | Turn off Jellyfin Enhanced's versions in the same sitting so seasons aren't requested twice |
-| Jellyfin Enhanced: Seerr requests | Requests, and Look & player → Requests hub on the web | **Wait for the coming app update.** Today's Zorofin apps request through Jellyfin Enhanced, so removing it hides Requests in the apps |
+| Jellyfin Enhanced: Seerr requests | Requests, and Look & player → Requests hub on the web | Zorofin apps 1.2 and later use Zorofin's Requests. Viewers on older apps lose Requests when you remove Jellyfin Enhanced until they update |
 | JavaScript Injector or custom CSS for a theme | Look & player | Remove the old scripts and CSS so nothing is drawn twice |
 
 **Bringing in Playback Reporting's history.** The plugin's source repository
@@ -496,7 +530,9 @@ those for now if you rely on them.
 | The web app still looks like plain Jellyfin | **Look & player** is on and saved, the companion is connected, and the browser tab was reloaded. A browser extension that blocks scripts can stop it |
 | Rows look doubled on Home | Another plugin or an old Injector script still draws its own rows. Remove it, or switch off that row |
 | The Home banner doesn't show | The Media Bar plugin is installed, or the library has no unwatched titles with backdrop art yet |
-| Recommended to request is empty | The viewer has fewer than three finished movies, or Seerr isn't connected |
+| Recommended to request is empty | The viewer has fewer than three finished movies, or Seerr isn't connected. In today's apps the row also needs Support turned on |
+| The email confirm button says the link isn't complete or opens the wrong site | Set "Address viewers open" on the Connect tab to your Jellyfin address that viewers can reach |
+| The companion won't start: network not found | `ZOROFIN_NETWORK` must name a Docker network that exists, usually the one Jellyfin is on (`docker network ls`) |
 | Live TV guide has no artwork | Set the companion address for Jellyfin on the Live TV tab, and turn on at least one artwork source |
 
 ## Questions
