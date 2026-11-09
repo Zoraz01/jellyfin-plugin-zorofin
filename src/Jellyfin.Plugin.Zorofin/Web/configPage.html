@@ -127,7 +127,10 @@
             #ZorofinConfigPage .zf-result li.bad { color: #ffd2cc; }
             #ZorofinConfigPage .zf-result li.bad::before { content: "✕"; color: var(--zf-red); font-weight: 800; }
             #ZorofinConfigPage .zf-result li.busy::before { content: "…"; }
-            #ZorofinConfigPage .zf-steps { background: var(--zf-panel); border-radius: var(--zf-radius); overflow: hidden; }
+            #ZorofinConfigPage .zf-steps { background: var(--zf-panel); border-radius: var(--zf-radius); overflow: hidden; margin-bottom: 12px; }
+            /* A list inside a card runs edge to edge under its heading, so its rows line up with the lists outside cards. */
+            #ZorofinConfigPage .zf-card .zf-steps { margin: 12px -20px -20px; border-radius: 0 0 var(--zf-radius) var(--zf-radius); }
+            #ZorofinConfigPage .zf-card .zf-steprow { padding-inline: 18px; }
             #ZorofinConfigPage .zf-steprow { display: flex; align-items: center; gap: 14px; padding: 14px 18px; }
             #ZorofinConfigPage .zf-steps .zf-steprow + .zf-steprow { border-top: 1px solid var(--zf-line); }
             #ZorofinConfigPage .zf-steprow > div { flex: 1; min-width: 0; }
@@ -154,6 +157,8 @@
                 #ZorofinConfigPage .zf-tabs { gap: 20px; }
                 #ZorofinConfigPage .zf-fields { grid-template-columns: 1fr; }
                 #ZorofinConfigPage .zf-card { padding: 16px; }
+                #ZorofinConfigPage .zf-card .zf-steps { margin: 12px -16px -16px; }
+                #ZorofinConfigPage .zf-card .zf-steprow { padding-inline: 16px; }
                 #ZorofinConfigPage .zf-card-head { flex-wrap: wrap; }
                 #ZorofinConfigPage .zf-actions .zf-btn { flex: 1; }
             }
