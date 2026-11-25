@@ -195,7 +195,7 @@
                     { id: 'foryou', title: 'For you', section: 'recommendations', summary: 'Recommended to request, and Popular this week.', heading: 'For you', intro: 'Rows on Home that help viewers find something to watch.' },
                     { id: 'home', title: 'Home', summary: 'Zorofin Home rows, in place of Home Screen Sections.', heading: 'Home', intro: 'Zorofin builds every Home row for each viewer: Continue Watching, their requests, rows picked for them and your library shelves. Empty rows stay hidden. The web client shows them with the Zorofin look on, and the Zorofin apps (1.3 and later) read them from here.' },
                     { id: 'announce', title: 'Announcement', summary: 'A message in everyone\'s Notifications.', heading: 'Announcement', intro: 'A short message for everyone on this server. It shows in Notifications in the web client and the Zorofin apps.' },
-                    { id: 'support', title: 'Support', summary: 'Messages from viewers.', heading: 'Support', intro: 'Viewers send you a short message from the Zorofin apps, such as a title that won\'t play. You reply here, and the reply shows in their Notifications.' },
+                    { id: 'support', title: 'Support', summary: 'Messages from viewers, and playback problems.', heading: 'Support', intro: 'Viewers send you a short message from the Zorofin apps, such as a title that won\'t play. You reply here, and the reply shows in their Notifications. The apps also report playback problems on their own.' },
                     { id: 'extras', title: 'Extras', summary: 'Trailers, Calendar, Downloads, ratings, Catch Up.', heading: 'Extras', intro: 'The extras that used to need Media Bar and Jellyfin Enhanced. Each one is off until you turn it on. The web client shows them with the Zorofin look on.' },
                     { id: 'look', title: 'Look & player', section: 'webUi', summary: 'The Zorofin look in Jellyfin\'s web client.', heading: 'Look and player', intro: 'Give Jellyfin\'s own web client the Zorofin look and the Zorofin player. Viewers reload their browser tab to see a change.' }
                 ];
@@ -1134,9 +1134,62 @@
                         mark.textContent = sw.input.checked ? (p.SupportInboxEnabled ? 'On' : 'On after you save') : (p.SupportInboxEnabled ? 'Off after you save' : 'Off');
                     });
                     panel.appendChild(box);
+                    // Playback problem reports: on unless the owner turned them off (older saved settings have no value).
+                    var reportsOn = p.PlaybackReportsEnabled !== false;
+                    var rsw = toggle(reportsOn, 'Collect playback problem reports');
+                    var rhead = el('div', 'zf-side'), rmark = chip(reportsOn ? { kind: 'ok', text: 'On' } : { kind: 'off', text: 'Off' });
+                    add(rhead, rmark, rsw.wrap);
+                    var rbox = card('Playback problems', 'The Zorofin apps tell this server when a title won\'t start, stalls or needs a fallback. Reports stay on this server. Each viewer can turn their own off in the app\'s Settings.', rhead);
+                    rbox.dataset.section = 'playbackReports';
+                    rsw.input.addEventListener('change', function () {
+                        rmark.textContent = rsw.input.checked ? (reportsOn ? 'On' : 'On after you save') : (reportsOn ? 'Off after you save' : 'Off');
+                    });
+                    var rlist = el('div', 'zf-tickets');
+                    rlist.appendChild(el('p', 'zf-muted', 'Loading…'));
+                    rbox.appendChild(rlist);
+                    panel.appendChild(rbox);
+                    var KINDS = { start_failed: 'Didn\'t start', stopped: 'Stopped', fallback: 'Fell back', stalled: 'Stalled', quality_lowered: 'Quality lowered', recovered: 'Recovered', slow_start: 'Slow start', app_error: 'App error' };
+                    function drawReports(reports) {
+                        rlist.textContent = '';
+                        if (!reports.length) { rlist.appendChild(el('p', 'zf-muted', reportsOn ? 'No problems reported.' : 'No reports. Collection is off.')); return; }
+                        // One card per title and platform, newest first, so a title that fails for everyone stands out.
+                        var groups = [], byKey = {};
+                        reports.forEach(function (r) {
+                            var key = (r.title || 'Unknown title') + '\n' + (r.platform || 'Unknown app');
+                            if (!byKey[key]) { byKey[key] = { title: r.title || 'Unknown title', platform: r.platform || 'Unknown app', items: [] }; groups.push(byKey[key]); }
+                            byKey[key].items.push(r);
+                        });
+                        groups.slice(0, 60).forEach(function (g) {
+                            var item = el('article', 'zf-card zf-ticket');
+                            add(item, el('h3', null, g.title), el('p', 'zf-muted', g.platform + ' · ' + g.items.length + (g.items.length === 1 ? ' report' : ' reports')));
+                            g.items.slice(0, 5).forEach(function (r) {
+                                var bits = [KINDS[r.kind] || r.kind, r.method, r.reason, r.startMs != null ? 'start took ' + (r.startMs / 1000).toFixed(1) + ' s' : '', r.positionSeconds != null ? 'at ' + Math.floor(r.positionSeconds / 60) + ' min' : ''].filter(Boolean).join(' · ');
+                                var who = [r.userName || 'A viewer', r.device, r.appVersion, when(r.at)].filter(Boolean).join(' · ');
+                                add(item, el('p', 'zf-ticket-text', bits), el('p', 'zf-muted', who));
+                            });
+                            if (g.items.length > 5) item.appendChild(el('p', 'zf-muted', 'And ' + (g.items.length - 5) + ' older.'));
+                            rlist.appendChild(item);
+                        });
+                        var bar = el('div', 'zf-actions'), status = el('span', 'zf-muted');
+                        var clear = el('button', 'zf-btn small', 'Delete all reports'); clear.type = 'button';
+                        clear.addEventListener('click', function () {
+                            if (!window.confirm('Delete every playback report? This can\'t be undone.')) return;
+                            call('DELETE', 'Zorofin/Admin/PlaybackReports').then(refreshReports, function () { status.textContent = 'Couldn\'t delete. Try again.'; });
+                        });
+                        add(bar, clear, status);
+                        rlist.appendChild(bar);
+                    }
+                    function refreshReports() {
+                        return request('GET', 'Zorofin/Admin/PlaybackReports').then(function (r) { drawReports((r && r.reports) || []); }, function () {
+                            rlist.textContent = ''; rlist.appendChild(el('p', 'zf-muted', 'Couldn\'t load reports.'));
+                        });
+                    }
                     actions(panel, {
                         collect: function () {
-                            return { plugin: sw.input.checked !== !!p.SupportInboxEnabled ? { SupportInboxEnabled: sw.input.checked } : {} };
+                            var change = {};
+                            if (sw.input.checked !== !!p.SupportInboxEnabled) change.SupportInboxEnabled = sw.input.checked;
+                            if (rsw.input.checked !== reportsOn) change.PlaybackReportsEnabled = rsw.input.checked;
+                            return { plugin: change };
                         }
                     });
                     var inbox = card('Messages', 'Newest first.');
@@ -1187,6 +1240,7 @@
                         });
                     }
                     refresh();
+                    refreshReports();
                 }
 
                 // ---- Tabs ----

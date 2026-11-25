@@ -1,0 +1,103 @@
+name: Release
+
+# Push a tag like v0.2.0.0 (it must match AssemblyVersion in the .csproj).
+# Builds and tests the plugin, publishes a GitHub release with the zip Jellyfin
+# installs, and adds the version to manifest.json on main, which is the plugin
+# repository URL people add in Jellyfin. Notes come from CHANGELOG.md.
+
+on:
+  push:
+    tags: ["v*.*.*.*"]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Check the tag matches the project version
+        id: version
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          project=src/Jellyfin.Plugin.Zorofin/Jellyfin.Plugin.Zorofin.csproj
+          declared=$(sed -n 's:.*<AssemblyVersion>\(.*\)</AssemblyVersion>.*:\1:p' "$project")
+          if [ "$version" != "$declared" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match AssemblyVersion $declared"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "semver=${version%.0}" >> "$GITHUB_OUTPUT"
+
+      - name: Test
+        run: dotnet test
+
+      - name: Release notes from CHANGELOG.md
+        env:
+          SEMVER: ${{ steps.version.outputs.semver }}
+        run: |
+          awk -v v="$SEMVER" '
+            $0 ~ "^## " v "( |$)" {on=1; next}
+            on && /^## / {exit}
+            on {print}
+          ' CHANGELOG.md > notes.md
+          if ! grep -q '[^[:space:]]' notes.md; then
+            echo "::error::CHANGELOG.md has no '## $SEMVER' section"
+            exit 1
+          fi
+          # Jellyfin shows the changelog as plain text in the catalog.
+          tr '\n' ' ' < notes.md | sed 's/  */ /g; s/^ //; s/ $//' > changelog.txt
+
+      - name: Build the zip and update the manifest
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          git show origin/main:manifest.json > manifest.json 2>/dev/null || true
+          python3 tools/package-zorofin-plugin.py \
+            --version "$VERSION" \
+            --changelog "$(cat changelog.txt)" \
+            --manifest manifest.json \
+            --repo "$GITHUB_REPOSITORY" \
+            --out dist
+
+      - name: Publish the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+          SEMVER: ${{ steps.version.outputs.semver }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" "dist/zorofin_${VERSION}.zip" \
+            --title "Zorofin plugin $SEMVER" --notes-file notes.md --verify-tag
+
+      - name: Commit manifest.json to main
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          cp manifest.json /tmp/manifest.json
+          git checkout -B main origin/main
+          cp /tmp/manifest.json manifest.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add manifest.json
+          git commit -m "Add plugin $VERSION to the repository manifest"
+          git push origin main
+
+      - name: Keep the manifest if the push was refused
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: manifest
+          path: manifest.json
+          if-no-files-found: ignore

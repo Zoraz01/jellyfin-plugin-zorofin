@@ -69,25 +69,45 @@ public class HomeRowsTests
     }
 
     [Fact]
-    public void SportsFiltersToTeamsAndHidesReplays()
+    public void SportsShowsOnlyFollowedTeamsOnNowOrAboutToStart()
     {
         var channel = new HomeEntry { Id = Guid.NewGuid(), Name = "Sports 1", Kind = "TvChannel" };
         var channels = new Dictionary<Guid, HomeEntry> { [channel.Id] = channel };
         GuideProgram P(string name, double startHours, bool sports = true) =>
             new(Guid.NewGuid(), channel.Id, name, null, Now.AddHours(startHours), Now.AddHours(startHours + 3), sports, Array.Empty<string>());
         var live = P("New York Knicks at Boston Celtics", -1);
-        var soon = P("Chicago Bulls at New York Knicks", 2);
-        var programs = new[] { soon, live, P("Knicks classic replay", 1), P("New York Knicks talk", 1), P("Lakers at Suns", 1), P("Late game", 13), P("Cooking", 1, false) };
+        var soon = P("Chicago Bulls at New York Knicks", 0.5);
+        var programs = new[]
+        {
+            soon, live, P("Knicks classic replay", 0.5), P("New York Knicks talk", 0.5), P("Lakers at Suns", 0.5),
+            P("Sports 1", -0.5), P("New York Knicks at Miami Heat", 3), P("Cooking", 0.5, false),
+        };
 
-        var all = HomeRules.Sports(programs, channels, Array.Empty<string>(), Now);
-        Assert.Equal(new[] { live.Id, programs[4].Id, soon.Id }, all.Select(c => c.Id));
-        Assert.Equal("On now", all[0].Badges.Single());
+        // No teams: no row, even with sports on. A generic "On now" channel never fills it.
+        Assert.Empty(HomeRules.Sports(programs, channels, Array.Empty<string>(), Now));
 
         var mine = HomeRules.Sports(programs, channels, new[] { "New York Knicks" }, Now);
         Assert.Equal(new[] { live.Id, soon.Id }, mine.Select(c => c.Id));
+        Assert.Equal("On now", mine[0].Badges.Single());
         Assert.Equal("Starting soon", mine[1].Badges.Single());
         Assert.Equal(channel.Id, mine[1].Entry.Id);
         Assert.False(HomeRules.TeamMatches("New York Knicksville", new[] { "New York Knicks" }));
+    }
+
+    [Fact]
+    public void ServerFavoritesComeFromTheCompanionSportsFeed()
+    {
+        var feed = JsonNode.Parse("""
+            {"games":[
+              {"home":{"name":"Boston Celtics","favorite":false},"away":{"name":"Washington Wizards","favorite":true}},
+              {"home":{"name":"Manchester United","favorite":true},"away":{"name":"Chelsea","favorite":"yes"}},
+              {"home":{"name":"Washington Wizards","favorite":true}},
+              "junk"
+            ]}
+            """);
+        Assert.Equal(new[] { "Washington Wizards", "Manchester United" }, HomeRules.ParseFavoriteTeams(feed));
+        Assert.Empty(HomeRules.ParseFavoriteTeams(JsonNode.Parse("{\"games\":{}}")));
+        Assert.Empty(HomeRules.ParseFavoriteTeams(null));
     }
 
     [Fact]
@@ -312,9 +332,163 @@ public class HomeRowsTests
         Assert.Empty(CuratedSeasons.ParseEvents("{"));
     }
 
+    [Fact]
+    public async Task ExplicitLikesBuildPersonalRowsWithoutChangingWatchedOrFavoriteState()
+    {
+        var source = new FakeSource();
+        var liked = Movie("Liked film", genres: new[] { "Mystery" });
+        var other = Movie("Suggested film", genres: new[] { "Mystery" });
+        source.LikedList.Add(liked);
+        source.SimilarList.AddRange(new[] { liked, other });
+        var rows = await HomeBuilder.BuildAsync(source, Now, TimeZoneInfo.Utc,
+            new HashSet<string> { "for-you" }, null, CancellationToken.None);
+        var row = Assert.Single(rows);
+        Assert.Equal("Recommended for you", row.Title);
+        Assert.Equal(other.Id, Assert.Single(row.Cards).Id);
+        Assert.False(liked.Played);
+        Assert.False(liked.Favorite);
+        Assert.DoesNotContain("for-you", HomeBuilder.AppRowIds);
+        var snapshot = new HomeSnapshot(Now, rows, new Dictionary<Guid, JsonObject> {
+            [other.Id] = new JsonObject { ["Id"] = other.Id.ToString("N"), ["Name"] = other.Name }
+        }, Array.Empty<string>());
+        Assert.Empty((JsonArray)HomeFeeds.AppRows(snapshot)["rows"]!);
+        Assert.Single((JsonArray)HomeFeeds.AppRows(snapshot, true)["rows"]!);
+    }
+
+    [Fact]
+    public void TasteIdsAreBoundedDeduplicatedAndDoNotTrustMalformedValues()
+    {
+        var id = Guid.NewGuid();
+        var data = new JsonObject { ["likedItemIds"] = new JsonArray("not-an-id", id.ToString(), id.ToString()) };
+        Assert.Equal(new[] { id }, HomeRowsService.ParseLiked(data));
+        Assert.Empty(HomeRowsService.ParseLiked(null));
+    }
+
+    [Fact]
+    public async Task CompanionPicksLeadPersonalRowsAndSkipWatchedTitles()
+    {
+        var source = new FakeSource();
+        var picks = Enumerable.Range(0, 6).Select(i => Movie("Pick " + i)).ToList();
+        var watched = Movie("Already seen", played: true);
+        source.Known.AddRange(picks.Append(watched));
+        var seed = Guid.NewGuid();
+        source.Picks = new HomeTastePicks(
+            new[] { watched.Id }.Concat(picks.Select(p => p.Id)).ToArray(),
+            new[] { new HomeTasteRow(seed, "Se7en", picks.Take(5).Select(p => p.Id).ToArray()), new HomeTasteRow(Guid.NewGuid(), "Too few", new[] { picks[0].Id }) });
+        source.SimilarList.Add(Movie("Genre match", genres: new[] { "Crime" }));
+        source.MovieList.Add(Movie("Recent", genres: new[] { "Crime" }));
+        var rows = await HomeBuilder.BuildAsync(source, Now, TimeZoneInfo.Utc,
+            new HashSet<string> { "for-you", "because-you-watched" }, null, CancellationToken.None);
+        Assert.Equal(new[] { "for-you", "because-you-watched-1" }, rows.Select(r => r.Id));
+        Assert.Equal(picks.Select(p => p.Id), rows[0].Cards.Select(c => c.Id));
+        Assert.Equal("Because you watched Se7en", rows[1].Title);
+        Assert.Equal(5, rows[1].Cards.Count);
+    }
+
+    [Fact]
+    public async Task WithoutCompanionPicksTheGenreRowsStillBuild()
+    {
+        var source = new FakeSource();
+        var recent = Movie("Recent", genres: new[] { "Crime" });
+        var match = Movie("Genre match", genres: new[] { "Crime" });
+        source.MovieList.Add(recent);
+        source.SimilarList.Add(match);
+        source.Known.Add(match);
+        source.Picks = new HomeTastePicks(new[] { match.Id }, Array.Empty<HomeTasteRow>());
+        var rows = await HomeBuilder.BuildAsync(source, Now, TimeZoneInfo.Utc,
+            new HashSet<string> { "because-you-watched" }, null, CancellationToken.None);
+        var row = Assert.Single(rows);
+        Assert.Equal("Because you watched Recent", row.Title);
+        Assert.Equal(match.Id, Assert.Single(row.Cards).Id);
+    }
+
+    [Fact]
+    public void CompanionPicksAreBoundedAndIgnoreMalformedValues()
+    {
+        var a = Guid.NewGuid();
+        var b = Guid.NewGuid();
+        var body = JsonNode.Parse($$"""
+            {"schemaVersion":1,"forYou":["nope","{{a:N}}","{{a:N}}"],
+             "because":[{"seedItemId":"{{b:N}}","seedName":"Se7en","itemIds":["{{a:N}}"]},
+                        {"seedItemId":"bad","seedName":"X","itemIds":["{{a:N}}"]},
+                        {"seedItemId":"{{b:N}}","seedName":"","itemIds":["{{a:N}}"]}]}
+            """);
+        var picks = HomeRowsService.ParsePicks(body)!;
+        Assert.Equal(new[] { a }, picks.ForYou);
+        var row = Assert.Single(picks.Because);
+        Assert.Equal(("Se7en", b), (row.SeedName, row.SeedId));
+        Assert.Null(HomeRowsService.ParsePicks(JsonNode.Parse("""{"forYou":[],"because":[]}""")));
+        Assert.Null(HomeRowsService.ParsePicks(null));
+    }
+
+    private static readonly byte[] Catalogue = System.Text.Encoding.UTF8.GetBytes("""
+        {"version":2,"events":[
+          {"id":"g1","start":"2026-11-05T12:30:00Z","away":{"name":"Washington Wizards","aliases":["washington wizards","wizards"]},
+           "home":{"name":"Boston Celtics","aliases":["boston celtics","celtics"]},
+           "logos":["/live-tv-logos/art/sports-aaaaaaaaaaaaaaaaaaaaaaaa-00000001.png","/live-tv-logos/art/sports-bbbbbbbbbbbbbbbbbbbbbbbb-00000002.png"]},
+          {"id":"bad","start":"2026-11-05T12:30:00Z","away":{"name":"A Team","aliases":["a team"]},"home":{"name":"B Team","aliases":["b team"]},
+           "logos":["/live-tv-logos/art/../../etc/passwd","/live-tv-logos/art/sports-bbbbbbbbbbbbbbbbbbbbbbbb-00000002.png"]},
+          {"id":"nologos","start":"2026-11-05T12:30:00Z","away":{"name":"C Team","aliases":["c team"]},"home":{"name":"D Team","aliases":["d team"]},"logos":[]}
+        ]}
+        """);
+
+    [Fact]
+    public void SportsCardsGetTheMatchupAndCrestsFromTheArtworkCatalogue()
+    {
+        var fixtures = SportsCrests.Parse(Catalogue);
+        Assert.Single(fixtures);
+        var kickoff = Now.AddMinutes(30);
+
+        var game = SportsCrests.Match("Live: NBA Basketball — Washington Wizards at Boston Celtics", kickoff, fixtures)!;
+        Assert.Equal(new[] { "Washington Wizards", "Boston Celtics" }, game.Teams);
+        Assert.Equal(new[]
+        {
+            "Zorofin/Web/ui/live-tv-logos/art/sports-aaaaaaaaaaaaaaaaaaaaaaaa-00000001.png",
+            "Zorofin/Web/ui/live-tv-logos/art/sports-bbbbbbbbbbbbbbbbbbbbbbbb-00000002.png",
+        }, game.Crests);
+
+        // Home team named first: teams and crests follow the guide's order.
+        var flipped = SportsCrests.Match("Celtics vs Wizards", kickoff, fixtures)!;
+        Assert.Equal(new[] { "Boston Celtics", "Washington Wizards" }, flipped.Teams);
+        Assert.EndsWith("00000002.png", flipped.Crests[0], StringComparison.Ordinal);
+
+        Assert.Null(SportsCrests.Match("TNT Sports 1", kickoff, fixtures));
+        Assert.Null(SportsCrests.Match("Washington Wizards at Boston Celtics", kickoff.AddHours(5), fixtures));
+        Assert.Null(SportsCrests.Match("Washington Wizards at Miami Heat", kickoff, fixtures));
+        Assert.Empty(SportsCrests.Parse(System.Text.Encoding.UTF8.GetBytes("{\"version\":1,\"events\":[]}")));
+        Assert.Empty(SportsCrests.Parse(System.Text.Encoding.UTF8.GetBytes("not json")));
+        Assert.Equal("malmo ff", SportsCrests.Normalize("Malmö FF"));
+
+        var channel = new HomeEntry { Id = Guid.NewGuid(), Name = "TNT Sports 1", Kind = "TvChannel" };
+        var card = new HomeCard(Guid.NewGuid(), channel, "Washington Wizards at Boston Celtics", new[] { "Starting soon" }, kickoff, kickoff.AddHours(3));
+        var other = new HomeCard(Guid.NewGuid(), channel, "Lakers at Suns", new[] { "On now" }, Now, Now.AddHours(2));
+        var rows = HomeRowsService.WithCrests(new[] { new HomeRowResult("sports", "Your teams / starting soon", HomeRowPlacement.Personal, "ready", new[] { card, other }) }, fixtures);
+        Assert.NotNull(rows[0].Cards[0].Game);
+        Assert.Null(rows[0].Cards[1].Game);
+
+        var items = new Dictionary<Guid, JsonObject> { [channel.Id] = new JsonObject { ["Id"] = channel.Id.ToString("N"), ["Type"] = "TvChannel" } };
+        var json = HomeFeeds.Sections(new HomeSnapshot(Now, rows, items, Array.Empty<string>()))["sections"]![0]!["cards"]!.AsArray();
+        Assert.Equal("Washington Wizards", json[0]!["matchup"]![0]!.GetValue<string>());
+        Assert.Equal(2, json[0]!["crests"]!.AsArray().Count);
+        Assert.Null(json[1]!["crests"]);
+    }
+
     private sealed class FakeSource : IHomeSource
     {
+        public List<HomeEntry> Known { get; } = new();
+
+        public HomeTastePicks? Picks { get; set; }
+
+        public HomeTastePicks? TastePicks => Picks;
+
+        public IReadOnlyList<HomeEntry> ByIds(IEnumerable<Guid> ids) =>
+            ids.Select(id => Known.FirstOrDefault(k => k.Id == id)).OfType<HomeEntry>().ToList();
+
         public List<HomeEntry> Favorite { get; } = new();
+
+        public List<HomeEntry> LikedList { get; } = new();
+
+        public List<HomeEntry> SimilarList { get; } = new();
 
         public List<HomeEntry> Episodes { get; } = new();
 
@@ -358,7 +532,9 @@ public class HomeRowsTests
 
         public IReadOnlyList<HomeEntry> RecentlyWatched(int limit) => MovieList;
 
-        public IReadOnlyList<HomeEntry> SharingGenres(HomeEntry seed, int limit) => Array.Empty<HomeEntry>();
+        public IReadOnlyList<HomeEntry> Liked(int limit) => LikedList;
+
+        public IReadOnlyList<HomeEntry> SharingGenres(HomeEntry seed, int limit) => SimilarList;
 
         public Task<IReadOnlyList<(HomeEntry Entry, DateTime? Arrived)>?> AvailableRequestsAsync(CancellationToken cancellationToken) =>
             Task.FromResult<IReadOnlyList<(HomeEntry Entry, DateTime? Arrived)>?>(null);

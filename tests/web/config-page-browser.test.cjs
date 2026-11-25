@@ -55,6 +55,13 @@ const stubs = ([plugin, view]) => {
     ajax: async ({ type, url, data }) => {
       const body = data ? JSON.parse(data) : null;
       window.sent.push([type, url, body]);
+      if (type === 'GET' && url.endsWith('/Zorofin/Admin/PlaybackReports')) {
+        return { reports: [
+          { kind: 'start_failed', userName: 'Alex', at: '2026-11-24T07:00:00Z', title: 'Big Test Movie', platform: 'Android TV', appVersion: '1.5.0', device: 'Den', method: 'transcode', reason: 'Player error 4003', startMs: 12000, positionSeconds: null },
+          { kind: 'stalled', userName: 'Sam', at: '2026-11-24T06:00:00Z', title: 'Big Test Movie', platform: 'Android TV', appVersion: '1.5.0', device: 'Den', method: 'direct', reason: '', startMs: null, positionSeconds: 600 },
+          { kind: 'fallback', userName: 'Sam', at: '2026-11-24T05:00:00Z', title: 'Other Show', platform: 'Roku', appVersion: '1.5.0', device: 'Roku', method: 'remux', reason: '', startMs: null, positionSeconds: null },
+        ] };
+      }
       if (type === 'GET') return view;
       if (url.endsWith('/Test')) return { ok: false, checks: [{ label: 'Settings', ok: true, detail: 'complete' }, { label: 'Seerr address', ok: false, detail: 'connect ECONNREFUSED' }] };
       if (url.endsWith('/recommendations') && body.values.ai === 'anthropic' && !body.values.aiKey) {
@@ -279,6 +286,20 @@ const tab = (page, id) => page.click(`.zf-tab[data-tab="${id}"]`);
     assert.equal(extras.SonarrUrl, 'http://sonarr:8989');
     assert.equal(extras.MdbListApiKey, 'mdb-key');
     assert.equal(await page.getAttribute('.zf-tab[data-tab="extras"] .zf-step', 'class'), 'zf-step ok');
+
+    // Support: playback problems are on by default, grouped by title and app, and the switch saves.
+    await tab(page, 'support');
+    const problems = '[data-section="playbackReports"]';
+    await page.waitForSelector(problems + ' .zf-ticket');
+    assert.equal(await page.isChecked(problems + ' input[type="checkbox"]'), true);
+    assert.deepEqual(await page.$$eval(problems + ' .zf-ticket h3', n => n.map(x => x.textContent)), ['Big Test Movie', 'Other Show']);
+    assert.match(await page.textContent(problems + ' .zf-ticket'), /Android TV · 2 reports/);
+    assert.match(await page.textContent(problems + ' .zf-ticket'), /Didn't start · transcode · Player error 4003 · start took 12\.0 s/);
+    assert.match(await page.textContent(problems + ' .zf-ticket'), /Stalled · direct · at 10 min/);
+    await page.click(problems + ' .zf-switch, ' + problems + ' label:has(input[type="checkbox"])');
+    assert.equal(await page.isChecked(problems + ' input[type="checkbox"]'), false);
+    await page.click('.zf-panel[data-panel="support"] button:has-text("Save")');
+    await page.waitForFunction(() => window.sent.some(x => x[0] === 'PLUGIN' && x[2].PlaybackReportsEnabled === false));
 
     // Every setup tab has a short "How this works" note.
     for (const id of ['connect', 'requests', 'alerts', 'livetv', 'foryou', 'home', 'announce', 'support', 'extras', 'look']) {

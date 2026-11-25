@@ -58,6 +58,38 @@ public class PlayHistoryTests
     }
 
     [Fact]
+    public void TrackerMatchesAStopWithADifferentPlaySessionId()
+    {
+        var tracker = new PlaybackTracker();
+        tracker.Start("ps1|item", Now, fallbackKeys: new[] { "s:old|item", "d:tv|item" }, context: "ctx");
+        tracker.Progress("ps1|item", Now.AddMinutes(3), paused: false);
+        Assert.Null(tracker.Stop("other|item", Now.AddMinutes(4), new[] { "s:old|other-item" }));
+        // Jellyfin's own idle stop after a reconnect: no play session id, new session, same device.
+        var stopped = tracker.Stop("new|item", Now.AddMinutes(4), new[] { "s:new|item", "d:tv|item" }, out var context);
+        Assert.Equal(240, stopped!.Value.Seconds);
+        Assert.Equal("ctx", context);
+        Assert.Equal(0, tracker.Count);
+    }
+
+    [Fact]
+    public void TrackerExpiresPlaysThatNeverStop()
+    {
+        var tracker = new PlaybackTracker();
+        tracker.Start("closed", Now, context: "a");
+        tracker.Progress("closed", Now.AddMinutes(4), paused: false);
+        tracker.Progress("closed", Now.AddMinutes(8), paused: false);
+        tracker.Start("watching", Now.AddMinutes(40), context: "b");
+        var expired = tracker.Expire(Now.AddMinutes(55), TimeSpan.FromMinutes(30));
+        var only = Assert.Single(expired);
+        Assert.Equal("a", only.Context);
+        Assert.Equal(8 * 60, only.Measured.Seconds);  // counted up to its last report only
+        Assert.Equal(1, tracker.Count);
+        Assert.Null(tracker.Stop("closed", Now.AddMinutes(56)));       // a late stop is not counted twice
+        Assert.Single(tracker.Expire(Now.AddMinutes(56), TimeSpan.Zero)); // shutdown writes down the rest
+        Assert.Equal(0, tracker.Count);
+    }
+
+    [Fact]
     public void StoreDropsMisTapsAndKeepsOrder()
     {
         var store = new PlayHistoryStore(null);

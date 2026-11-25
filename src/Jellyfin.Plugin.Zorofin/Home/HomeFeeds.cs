@@ -15,11 +15,17 @@ public static class HomeFeeds
     /// </summary>
     /// <param name="snapshot">Built Home.</param>
     /// <returns>Feed JSON.</returns>
-    public static JsonObject AppRows(HomeSnapshot snapshot)
+    public static JsonObject AppRows(HomeSnapshot snapshot) => AppRows(snapshot, false);
+
+    /// <summary>The app feed with an explicit opt-in for the additional taste row.</summary>
+    /// <param name="snapshot">Built Home.</param>
+    /// <param name="includeTaste">Whether this client accepts the taste row.</param>
+    /// <returns>Feed JSON.</returns>
+    public static JsonObject AppRows(HomeSnapshot snapshot, bool includeTaste)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
         var rows = new JsonArray();
-        foreach (var id in HomeBuilder.AppRowIds)
+        foreach (var id in includeTaste ? HomeBuilder.AppRowIds.Concat(new[] { "for-you" }) : HomeBuilder.AppRowIds)
         {
             if (snapshot.Rows.FirstOrDefault(r => r.Id == id) is not { } row)
             {
@@ -109,6 +115,13 @@ public static class HomeFeeds
             if (card.EndsAt is { } end)
             {
                 json["endsAt"] = Stamp(end);
+            }
+
+            // Sports: the two teams in the guide's order and their crests (server-relative image paths, anonymous).
+            if (card.Game is { } game)
+            {
+                json["matchup"] = new JsonArray(game.Teams.Select(t => (JsonNode?)t).ToArray());
+                json["crests"] = new JsonArray(game.Crests.Select(c => (JsonNode?)c).ToArray());
             }
 
             cards.Add(json);

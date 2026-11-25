@@ -1,0 +1,12 @@
+[
+  {
+    "guid": "e49272bf-d1f8-4d83-8cd4-7b3c7f2a1fce",
+    "name": "Zorofin",
+    "description": "Seerr requests, play history with an Activity page, popular-this-week stats and server announcements.",
+    "overview": "Optional server features for Jellyfin and the Zorofin apps.",
+    "owner": "Zoraz01",
+    "category": "General",
+    "imageUrl": "",
+    "versions": []
+  }
+]

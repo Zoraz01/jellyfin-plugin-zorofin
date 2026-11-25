@@ -173,4 +173,11 @@ public class PluginConfiguration : BasePluginConfiguration
     /// answered from the Support tab. Today's apps also show Recommended to request only while this is on.
     /// </summary>
     public bool SupportInboxEnabled { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the Zorofin apps may send playback problem reports (a title that
+    /// would not start, stalled or fell back) for administrators to read. On unless the owner turns it off; each
+    /// viewer can still turn their own reports off in the app.
+    /// </summary>
+    public bool PlaybackReportsEnabled { get; set; } = true;
 }

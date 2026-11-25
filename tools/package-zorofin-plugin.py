@@ -20,9 +20,17 @@ import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-PLUGIN_DIR = ROOT / "server" / "jellyfin-plugin-zorofin"
+# Works in this monorepo and in the exported public plugin repository, where the
+# plugin folder is the repository root.
+PLUGIN_DIR = ROOT if (ROOT / "src" / "Jellyfin.Plugin.Zorofin").is_dir() else ROOT / "server" / "jellyfin-plugin-zorofin"
 PROJECT = PLUGIN_DIR / "src" / "Jellyfin.Plugin.Zorofin" / "Jellyfin.Plugin.Zorofin.csproj"
-TEMPLATE = ROOT / "docs" / "community" / "plugin-release" / "manifest.template.json"
+TEMPLATE = next(
+    (path for path in (
+        ROOT / "docs" / "community" / "plugin-release" / "manifest.template.json",
+        PLUGIN_DIR / "tools" / "manifest.template.json",
+    ) if path.exists()),
+    ROOT / "docs" / "community" / "plugin-release" / "manifest.template.json",
+)
 GUID = "e49272bf-d1f8-4d83-8cd4-7b3c7f2a1fce"
 DLL = "Jellyfin.Plugin.Zorofin.dll"
 

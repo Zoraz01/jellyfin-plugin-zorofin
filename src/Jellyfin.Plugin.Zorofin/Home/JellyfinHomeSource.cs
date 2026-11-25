@@ -64,6 +64,10 @@ public sealed class JellyfinHomeSource : IHomeSource
     private readonly UpstreamClient _upstream;
     private readonly PluginConfiguration _config;
     private readonly ContinueWatchingHides? _hides;
+    private readonly IReadOnlyList<Guid> _liked;
+    private readonly HomeTastePicks? _picks;
+    private readonly IReadOnlyList<string> _serverTeams;
+    private IReadOnlyList<string>? _teams;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="JellyfinHomeSource"/> class.
@@ -71,10 +75,16 @@ public sealed class JellyfinHomeSource : IHomeSource
     /// <param name="user">Viewer.</param>
     /// <param name="services">Jellyfin and plugin services.</param>
     /// <param name="config">Plugin configuration.</param>
-    public JellyfinHomeSource(User user, HomeServices services, PluginConfiguration config)
+    /// <param name="liked">Account-scoped recommendation preferences.</param>
+    /// <param name="picks">Library picks from the companion, if any.</param>
+    /// <param name="serverTeams">The server's favorite teams from the companion, if any.</param>
+    public JellyfinHomeSource(User user, HomeServices services, PluginConfiguration config, IReadOnlyList<Guid>? liked = null, HomeTastePicks? picks = null, IReadOnlyList<string>? serverTeams = null)
     {
         ArgumentNullException.ThrowIfNull(services);
         _user = user;
+        _liked = liked ?? Array.Empty<Guid>();
+        _picks = picks;
+        _serverTeams = serverTeams ?? Array.Empty<string>();
         _library = services.Library;
         _userData = services.UserData;
         _tv = services.Tv;
@@ -228,16 +238,37 @@ public sealed class JellyfinHomeSource : IHomeSource
     /// <inheritdoc />
     public IReadOnlyList<string> Teams()
     {
+        if (_teams is not null)
+        {
+            return _teams;
+        }
+
         try
         {
             var prefs = _preferences.ListCustomItemDisplayPreferences(_user.Id, TeamsPreferences.GetMD5(), TeamsClient);
-            return prefs.TryGetValue(TeamsKey, out var json) ? HomeRules.ParseTeams(json) : Array.Empty<string>();
+            return _teams = prefs.TryGetValue(TeamsKey, out var json) ? HomeRules.ParseTeams(json) : Array.Empty<string>();
         }
         catch (InvalidOperationException)
         {
-            return Array.Empty<string>();
+            return _teams = Array.Empty<string>();
         }
     }
+
+    /// <inheritdoc />
+    public IReadOnlyList<string> ServerTeams() => _serverTeams;
+
+    /// <inheritdoc />
+    public HomeTastePicks? TastePicks => _picks;
+
+    /// <inheritdoc />
+    public IReadOnlyList<HomeEntry> ByIds(IEnumerable<Guid> ids) => Entries((ids ?? Array.Empty<Guid>()).Take(60)
+        .Select(id => _library.GetItemById(id)).OfType<BaseItem>()
+        .Where(item => item.IsVisibleStandalone(_user) && item.GetBaseItemKind() is BaseItemKind.Movie or BaseItemKind.Series).ToList());
+
+    /// <inheritdoc />
+    public IReadOnlyList<HomeEntry> Liked(int limit) => Entries(_liked.Take(Math.Clamp(limit, 0, 20))
+        .Select(id => _library.GetItemById(id)).OfType<BaseItem>()
+        .Where(item => item.IsVisibleStandalone(_user) && item.GetBaseItemKind() is BaseItemKind.Movie or BaseItemKind.Series).ToList());
 
     /// <inheritdoc />
     public IReadOnlyList<HomeEntry> Favorites(int limit) => Entries(Query(q =>

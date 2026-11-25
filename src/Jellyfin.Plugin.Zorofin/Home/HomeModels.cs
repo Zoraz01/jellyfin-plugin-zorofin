@@ -87,7 +87,19 @@ public sealed record AvailableRequest(string Type, int TmdbId, bool Is4K, IReadO
 /// <param name="Badges">Badges, such as "New episode" or "4K".</param>
 /// <param name="StartsAt">Broadcast start, for sports.</param>
 /// <param name="EndsAt">Broadcast end, for sports.</param>
-public sealed record HomeCard(Guid Id, HomeEntry Entry, string Subtitle, IReadOnlyList<string> Badges, DateTime? StartsAt = null, DateTime? EndsAt = null);
+/// <param name="Game">For sports: the two teams and their crest images, when the artwork catalogue has the fixture.</param>
+public sealed record HomeCard(Guid Id, HomeEntry Entry, string Subtitle, IReadOnlyList<string> Badges, DateTime? StartsAt = null, DateTime? EndsAt = null, CardCrests? Game = null);
+
+/// <summary>Library picks the companion's recommendations module made for one viewer.</summary>
+/// <param name="ForYou">Item ids for "Recommended for you", best first.</param>
+/// <param name="Because">Up to two "Because you watched" rows.</param>
+public sealed record HomeTastePicks(IReadOnlyList<Guid> ForYou, IReadOnlyList<HomeTasteRow> Because);
+
+/// <summary>One "Because you watched" row from the companion.</summary>
+/// <param name="SeedId">The title the viewer watched.</param>
+/// <param name="SeedName">Its name, for the row title.</param>
+/// <param name="ItemIds">Recommended item ids, best first.</param>
+public sealed record HomeTasteRow(Guid SeedId, string SeedName, IReadOnlyList<Guid> ItemIds);
 
 /// <summary>Where a row sits on Home.</summary>
 public enum HomeRowPlacement

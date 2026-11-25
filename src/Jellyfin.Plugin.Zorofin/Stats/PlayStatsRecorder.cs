@@ -14,9 +14,15 @@ namespace Jellyfin.Plugin.Zorofin.Stats;
 /// <summary>
 /// Listens to playback start, progress and stop. Feeds the anonymous Popular totals when "Popular this week"
 /// is on, and the admin play history when "Play history" is on. Paused time counts toward neither.
+/// Plays whose stop report never arrives (app closed, TV asleep, connection lost) are written down once
+/// they have been silent for <see cref="IdleTimeout"/>, and plays still running when Jellyfin shuts down
+/// are written down at shutdown.
 /// </summary>
 public sealed class PlayStatsRecorder : IHostedService, IDisposable
 {
+    /// <summary>Silence after which a playback with no stop report counts as over.</summary>
+    public static readonly TimeSpan IdleTimeout = TimeSpan.FromMinutes(30);
+
     private static readonly TimeSpan FlushInterval = TimeSpan.FromMinutes(5);
     private readonly ISessionManager _sessions;
     private readonly PlayStatsStore _store;
@@ -99,7 +105,9 @@ public sealed class PlayStatsRecorder : IHostedService, IDisposable
         _sessions.PlaybackProgress -= OnProgress;
         _sessions.PlaybackStopped -= OnStop;
         _timer?.Change(Timeout.Infinite, Timeout.Infinite);
-        _store.Flush(DateTime.UtcNow);
+        var now = DateTime.UtcNow;
+        RecordExpired(_tracker.Expire(now, TimeSpan.Zero), now);
+        _store.Flush(now);
         return Task.CompletedTask;
     }
 
@@ -112,6 +120,35 @@ public sealed class PlayStatsRecorder : IHostedService, IDisposable
 
     private static string? Key(PlaybackProgressEventArgs e) =>
         e.Item is null ? null : (e.PlaySessionId ?? e.Session?.Id ?? e.DeviceId) + "|" + e.Item.Id.ToString("N");
+
+    // The stop Jellyfin raises itself when a session goes idle has no play session id, and some apps send
+    // their stop with a different one; the session (or, after a reconnect, the device) and item still match.
+    private static string[]? FallbackKeys(PlaybackProgressEventArgs e)
+    {
+        if (e.Item is null)
+        {
+            return null;
+        }
+
+        var item = e.Item.Id.ToString("N");
+        var keys = new List<string>(2);
+        if (e.Session?.Id is { Length: > 0 } session)
+        {
+            keys.Add("s:" + session + "|" + item);
+        }
+
+        if ((e.DeviceId ?? e.Session?.DeviceId) is { Length: > 0 } device)
+        {
+            keys.Add("d:" + device + "|" + item);
+        }
+
+        return keys.Count == 0 ? null : keys.ToArray();
+    }
+
+    private static PlayContext? Context(PlaybackProgressEventArgs e) =>
+        e.Item is null || e.Session is not { } session
+            ? null
+            : new PlayContext(e.Item, session.UserId, session.UserName, e.ClientName ?? session.Client, e.DeviceName ?? session.DeviceName);
 
     private static (string? Method, string? Transcode) Delivery(PlaybackProgressEventArgs e)
     {
@@ -138,6 +175,7 @@ public sealed class PlayStatsRecorder : IHostedService, IDisposable
     private void Tick()
     {
         var now = DateTime.UtcNow;
+        RecordExpired(_tracker.Expire(now, IdleTimeout), now);
         _store.Flush(now);
         if (now - _lastPrune > TimeSpan.FromHours(6))
         {
@@ -151,7 +189,7 @@ public sealed class PlayStatsRecorder : IHostedService, IDisposable
         if ((StatsOn || HistoryOn) && e.Item is not null && Key(e) is { } key)
         {
             var (method, transcode) = Delivery(e);
-            _tracker.Start(key, DateTime.UtcNow, e.IsPaused, method, transcode);
+            _tracker.Start(key, DateTime.UtcNow, e.IsPaused, method, transcode, FallbackKeys(e), Context(e));
         }
     }
 
@@ -160,26 +198,45 @@ public sealed class PlayStatsRecorder : IHostedService, IDisposable
         if ((StatsOn || HistoryOn) && e.Item is not null && Key(e) is { } key)
         {
             var (method, transcode) = Delivery(e);
-            _tracker.Progress(key, DateTime.UtcNow, e.IsPaused, method, transcode);
+            _tracker.Progress(key, DateTime.UtcNow, e.IsPaused, method, transcode, FallbackKeys(e), Context(e));
         }
     }
 
     private void OnStop(object? sender, PlaybackStopEventArgs e)
     {
-        if (Key(e) is not { } key || _tracker.Stop(key, DateTime.UtcNow) is not { } measured)
+        if (Key(e) is not { } key || _tracker.Stop(key, DateTime.UtcNow, FallbackKeys(e), out var tracked) is not { } measured)
         {
             return;
         }
 
-        var now = DateTime.UtcNow;
-        if (StatsOn)
-        {
-            _store.Record(TitleFor(e.Item), TimeSpan.FromSeconds(measured.Seconds), now);
-        }
+        Record(Context(e) ?? tracked as PlayContext, measured, e.PlayedToCompletion, DateTime.UtcNow);
+    }
 
-        if (HistoryOn && e.Item is not null && e.Session is { } session)
+    private void RecordExpired(IReadOnlyList<((DateTime StartedUtc, int Seconds, string? PlayMethod, string? Transcode) Measured, object? Context)> expired, DateTime now)
+    {
+        foreach (var (measured, context) in expired)
         {
-            _history.Add(Describe(e.Item, session.UserId, session.UserName, e.ClientName ?? session.Client, e.DeviceName ?? session.DeviceName, measured, e.PlayedToCompletion));
+            Record(context as PlayContext, measured, completed: false, now);
         }
     }
+
+    private void Record(PlayContext? context, (DateTime StartedUtc, int Seconds, string? PlayMethod, string? Transcode) measured, bool completed, DateTime now)
+    {
+        if (context is null)
+        {
+            return;
+        }
+
+        if (StatsOn)
+        {
+            _store.Record(TitleFor(context.Item), TimeSpan.FromSeconds(measured.Seconds), now);
+        }
+
+        if (HistoryOn)
+        {
+            _history.Add(Describe(context.Item, context.UserId, context.UserName, context.Client, context.Device, measured, completed));
+        }
+    }
+
+    private sealed record PlayContext(BaseItem Item, Guid UserId, string? UserName, string? Client, string? Device);
 }

@@ -16,7 +16,7 @@ public class AppCompatibilityTests
     [Fact]
     public void StoreAppNamesFollowWhatThePluginCanAnswer()
     {
-        Assert.Empty(CapabilityManifest.Build(new PluginConfiguration()).Features);
+        Assert.Empty(CapabilityManifest.Build(new PluginConfiguration { PlaybackReportsEnabled = false }).Features);
 
         var inbox = CapabilityManifest.Build(new PluginConfiguration { SupportInboxEnabled = true }).Features;
         Assert.Equal(new CapabilityFeature(1, true), inbox["support"]);

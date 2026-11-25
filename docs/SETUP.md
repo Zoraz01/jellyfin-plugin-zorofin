@@ -347,7 +347,7 @@ plugin.
 | 4K / HDR showcase | Movies with a 4K source, badged 4K, Dolby Vision, HDR10, HDR10+ or HLG |
 | Seasonal picks | Holidays and seasons, from your collections first |
 | Popular this week | Needs Popular this week |
-| Your teams / starting soon | Live TV sports on now or in the next 12 hours, for the viewer's teams |
+| Your teams / starting soon | Your teams' games on now or starting within the hour (the server's favorite teams when a viewer picks none); hidden otherwise |
 | Because you watched … | Up to two rows like titles the viewer finished |
 | Favorites, Recently added, Watch again | Library shelves |
 

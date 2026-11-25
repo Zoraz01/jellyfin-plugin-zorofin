@@ -35,6 +35,12 @@ public sealed record CapabilityManifest(
     /// <summary>The announcement banner at /Zorofin/Announcement.</summary>
     public const int AnnouncementsVersion = 1;
 
+    /// <summary>Per-account read notifications at /Zorofin/Notifications/Read.</summary>
+    public const int NotificationReadsVersion = 1;
+
+    /// <summary>Playback problem reports at /Zorofin/PlaybackReports.</summary>
+    public const int PlaybackReportsVersion = 1;
+
     /// <summary>
     /// Features the Zorofin apps knew before the plugin existed, all at version 1. A server that still serves them
     /// itself can keep listing them (<see cref="PluginConfiguration.LegacyAppFeatures"/>); the plugin serves none.
@@ -88,6 +94,11 @@ public sealed record CapabilityManifest(
             features["announcements"] = new CapabilityFeature(AnnouncementsVersion, true);
         }
 
+        if (config.PlaybackReportsEnabled)
+        {
+            features["playbackReports"] = new CapabilityFeature(PlaybackReportsVersion, true);
+        }
+
         foreach (var (name, feature) in companionFeatures ?? new Dictionary<string, CapabilityFeature>())
         {
             features.TryAdd(name, feature);
@@ -118,6 +129,13 @@ public sealed record CapabilityManifest(
         foreach (var name in ParseLegacyFeatures(config.LegacyAppFeatures))
         {
             features[name] = new CapabilityFeature(1, true);
+        }
+
+        // Read state lives in the plugin whichever service sends the notices, so it is listed whenever there
+        // are notices to read.
+        if (features.ContainsKey("notifications") || features.ContainsKey("requests"))
+        {
+            features["notificationReads"] = new CapabilityFeature(NotificationReadsVersion, true);
         }
 
         return new CapabilityManifest(1, features);

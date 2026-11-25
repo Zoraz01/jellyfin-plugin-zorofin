@@ -82,6 +82,10 @@ public interface IHomeSource
     /// <returns>Team names.</returns>
     IReadOnlyList<string> Teams();
 
+    /// <summary>The server's favorite teams, used when the viewer follows none.</summary>
+    /// <returns>Team names.</returns>
+    IReadOnlyList<string> ServerTeams() => Array.Empty<string>();
+
     /// <summary>The viewer's favorite movies and shows.</summary>
     /// <param name="limit">Most to return.</param>
     /// <returns>Entries.</returns>
@@ -102,6 +106,19 @@ public interface IHomeSource
     /// <param name="limit">Most to return.</param>
     /// <returns>Entries.</returns>
     IReadOnlyList<HomeEntry> RecentlyWatched(int limit);
+
+    /// <summary>Titles explicitly liked for recommendations, with no watched/favorite change.</summary>
+    /// <param name="limit">Most to return.</param>
+    /// <returns>Visible preference seeds.</returns>
+    IReadOnlyList<HomeEntry> Liked(int limit) => Array.Empty<HomeEntry>();
+
+    /// <summary>Gets the companion's library picks for this viewer, or null when there are none.</summary>
+    HomeTastePicks? TastePicks => null;
+
+    /// <summary>Movies and shows by id, in the given order, skipping any the viewer can't see.</summary>
+    /// <param name="ids">Item ids.</param>
+    /// <returns>Entries.</returns>
+    IReadOnlyList<HomeEntry> ByIds(IEnumerable<Guid> ids) => Array.Empty<HomeEntry>();
 
     /// <summary>Movies or shows (same kind as the seed) sharing a genre with it.</summary>
     /// <param name="seed">Seed title.</param>
@@ -132,6 +149,7 @@ public static class HomeBuilder
         ("curated", "Seasonal picks", HomeRowPlacement.Personal),
         ("popular", "Popular on Zorofin this week", HomeRowPlacement.Personal),
         ("sports", "Your teams / starting soon", HomeRowPlacement.Personal),
+        ("for-you", "Recommended for you", HomeRowPlacement.Personal),
         ("because-you-watched", "Because you watched", HomeRowPlacement.Personal),
         ("favorites", "Favorites", HomeRowPlacement.Library),
         ("recently-added-movies", "Recently Added Movies", HomeRowPlacement.Library),
@@ -197,11 +215,47 @@ public static class HomeBuilder
                                 .Select((p, n) => new HomeCard(p.Id, p, "#" + (n + 1) + " this week", new[] { "#" + (n + 1) })).ToList()));
                         break;
                     case "sports":
-                        var programs = source.SportsPrograms(nowUtc, nowUtc + HomeRules.SportsWindow, 1500);
+                        var teams = source.Teams() is { Count: > 0 } own ? own : source.ServerTeams();
+                        if (teams.Count == 0)
+                        {
+                            rows.Add(Row(id, title, placement, Array.Empty<HomeCard>()));
+                            break;
+                        }
+
+                        var programs = source.SportsPrograms(nowUtc, nowUtc + HomeRules.SportsSoon, 1500);
                         var channels = source.Channels(programs.Select(p => p.ChannelId).Distinct());
-                        rows.Add(Row(id, title, placement, HomeRules.Sports(programs, channels, source.Teams(), nowUtc)));
+                        rows.Add(Row(id, title, placement, HomeRules.Sports(programs, channels, teams, nowUtc)));
+                        break;
+                    case "for-you" when Picked(source, source.TastePicks?.ForYou) is { Count: >= MinPicked } picked:
+                        rows.Add(Row(id, title, placement, picked));
+                        break;
+                    case "for-you":
+                        var liked = source.Liked(8).Where(seed => seed.Genres.Count > 0).Take(2).ToList();
+                        var likedIds = liked.Select(seed => seed.Id).ToHashSet();
+                        var personal = liked.SelectMany((seed, seedIndex) =>
+                            HomeRules.Similar(seed, source.SharingGenres(seed, 100))
+                                .Select((card, rank) => (Card: card, Rank: rank, Seed: seedIndex)))
+                            .OrderBy(pick => pick.Rank).ThenBy(pick => pick.Seed)
+                            .Select(pick => pick.Card).Where(card => !likedIds.Contains(card.Id))
+                            .DistinctBy(card => card.Id).Take(HomeRules.CardLimit).ToList();
+                        rows.Add(Row(id, title, placement, personal));
                         break;
                     case "because-you-watched":
+                        var built = 0;
+                        foreach (var because in source.TastePicks?.Because ?? Array.Empty<HomeTasteRow>())
+                        {
+                            if (built < 2 && Picked(source, because.ItemIds) is { Count: >= MinPicked } cards)
+                            {
+                                built++;
+                                rows.Add(Row(id + "-" + built, title + " " + because.SeedName, placement, cards));
+                            }
+                        }
+
+                        if (built > 0)
+                        {
+                            break;
+                        }
+
                         var n = 0;
                         foreach (var seed in source.RecentlyWatched(8).Where(s => s.Genres.Count > 0).Take(2))
                         {
@@ -282,6 +336,18 @@ public static class HomeBuilder
 
         return ("Seasonal picks", Array.Empty<HomeCard>());
     }
+
+    /// <summary>Fewest companion picks worth a row; with fewer, the genre rows are used instead.</summary>
+    private const int MinPicked = 4;
+
+    /// <summary>Companion picks the viewer can still play and hasn't watched, as cards.</summary>
+    /// <param name="source">Viewer's library reads.</param>
+    /// <param name="ids">Picked item ids, best first.</param>
+    /// <returns>Cards, at most a row's worth.</returns>
+    private static IReadOnlyList<HomeCard> Picked(IHomeSource source, IReadOnlyList<Guid>? ids) => ids is null || ids.Count == 0
+        ? Array.Empty<HomeCard>()
+        : source.ByIds(ids).Where(e => e.Playable && !e.Played).DistinctBy(e => e.Id).Take(HomeRules.CardLimit)
+            .Select(e => new HomeCard(e.Id, e, string.Empty, Array.Empty<string>())).ToList();
 
     private static HomeRowResult Row(string id, string title, HomeRowPlacement placement, IReadOnlyList<HomeCard> cards) =>
         new(id, title, placement, cards.Count > 0 ? "ready" : "empty", cards);

@@ -22,8 +22,11 @@ public static class HomeRules
     /// <summary>The short-movie limit in minutes.</summary>
     public const int ShortMovieMinutes = 90;
 
-    /// <summary>How far ahead the sports row looks.</summary>
+    /// <summary>How long a live broadcast can have been on and still count (guards against stale guide rows).</summary>
     public static readonly TimeSpan SportsWindow = TimeSpan.FromHours(12);
+
+    /// <summary>How soon before kickoff a followed team's game joins the sports row.</summary>
+    public static readonly TimeSpan SportsSoon = TimeSpan.FromHours(1);
 
     private static readonly Regex NotLive = new(@"\b(highlights?|replay|classic|preview|studio|sportscenter|news|talk)\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(100));
     private static readonly Regex Separators = new(@"[^\p{L}\p{N}]+", RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(100));
@@ -151,21 +154,50 @@ public static class HomeRules
         return teams.Any(team => normalized.Contains(" " + Normalize(team) + " ", StringComparison.Ordinal));
     }
 
-    /// <summary>Sports on now or starting in the next 12 hours, filtered to the viewer's teams when they follow any.</summary>
+    /// <summary>
+    /// Games for the viewer's teams that are on now or start within the hour, on a channel the viewer can open.
+    /// With no teams there is no row: generic sports channels never fill it.
+    /// </summary>
     /// <param name="programs">Guide programmes.</param>
     /// <param name="channels">Channels the viewer can open, by id.</param>
-    /// <param name="teams">Followed teams.</param>
+    /// <param name="teams">Followed teams (the viewer's own, else the server's favorites).</param>
     /// <param name="nowUtc">Now.</param>
     /// <returns>Cards that open the channel.</returns>
     public static IReadOnlyList<HomeCard> Sports(IEnumerable<GuideProgram> programs, IReadOnlyDictionary<Guid, HomeEntry> channels, IReadOnlyList<string> teams, DateTime nowUtc)
     {
+        if (teams.Count == 0)
+        {
+            return Array.Empty<HomeCard>();
+        }
+
         return programs
             .Where(p => (p.IsSports || p.Genres.Any(g => string.Equals(g, "sport", StringComparison.OrdinalIgnoreCase) || string.Equals(g, "sports", StringComparison.OrdinalIgnoreCase)))
-                && !NotLive.IsMatch(p.Name) && p.End > nowUtc && p.Start <= nowUtc + SportsWindow && p.Start > nowUtc - SportsWindow
-                && channels.ContainsKey(p.ChannelId) && (teams.Count == 0 || TeamMatches(p.Name + " " + p.Overview, teams)))
+                && !NotLive.IsMatch(p.Name) && p.End > nowUtc && p.Start <= nowUtc + SportsSoon && p.Start > nowUtc - SportsWindow
+                && channels.ContainsKey(p.ChannelId) && TeamMatches(p.Name + " " + p.Overview, teams))
             .OrderBy(p => p.Start).Take(CardLimit)
             .Select(p => new HomeCard(p.Id, channels[p.ChannelId], p.Name, new[] { p.Start <= nowUtc ? "On now" : "Starting soon" }, p.Start, p.End))
             .ToList();
+    }
+
+    /// <summary>
+    /// The server's favorite teams playing today, from the companion's sports feed (GET sportsEvents/live?window=today):
+    /// the full name of every side it marks as a favorite. Used when a viewer hasn't picked their own teams.
+    /// </summary>
+    /// <param name="body">Feed body.</param>
+    /// <returns>Up to 12 team names.</returns>
+    public static IReadOnlyList<string> ParseFavoriteTeams(System.Text.Json.Nodes.JsonNode? body)
+    {
+        if (body is not System.Text.Json.Nodes.JsonObject feed || feed["games"] is not System.Text.Json.Nodes.JsonArray games)
+        {
+            return Array.Empty<string>();
+        }
+
+        var names = games.OfType<System.Text.Json.Nodes.JsonObject>().Take(200)
+            .SelectMany(game => new[] { game["home"], game["away"] }.OfType<System.Text.Json.Nodes.JsonObject>())
+            .Where(side => side["favorite"] is System.Text.Json.Nodes.JsonValue flag && flag.TryGetValue<bool>(out var favorite) && favorite)
+            .Select(side => side["name"] is System.Text.Json.Nodes.JsonValue name && name.TryGetValue<string>(out var text) ? text : null)
+            .OfType<string>();
+        return ParseTeams(System.Text.Json.JsonSerializer.Serialize(names.ToArray()));
     }
 
     /// <summary>Reads the followed teams the apps and web save in Jellyfin's display preferences.</summary>

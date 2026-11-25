@@ -86,11 +86,13 @@ public class HomeController : ControllerBase
         return NoContent();
     }
 
-    /// <summary>The seven app rows, in the same shape as the older /support/home/rows feed.</summary>
+    /// <summary>The compatible seven-row app feed, with an optional taste row for updated clients.</summary>
+    /// <param name="taste">Explicit opt-in to the additional recommendation row.</param>
+    /// <param name="fresh">Refresh a completed snapshot after viewer changes.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Feed.</returns>
     [HttpGet("Rows")]
-    public Task<ActionResult> Rows(CancellationToken cancellationToken) => Serve(HomeFeeds.AppRows, cancellationToken, false);
+    public Task<ActionResult> Rows([FromQuery] bool taste, [FromQuery] bool fresh, CancellationToken cancellationToken) => Serve(snapshot => HomeFeeds.AppRows(snapshot, taste), cancellationToken, fresh);
 
     /// <summary>Every Home row for the web client, replacing Home Screen Sections.</summary>
     /// <param name="fresh">Rebuild now, after the viewer changed their teams.</param>

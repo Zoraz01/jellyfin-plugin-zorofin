@@ -9,7 +9,12 @@ installing the plugin and the optional companion, every Dashboard tab, how the
 two fit together, replacing other Jellyfin plugins, and troubleshooting. This
 README is the technical reference.
 
-Status: **pre-release (0.1.0)**. Not yet published to a plugin repository. Zorofin
+Version **0.2.0** (first public release, November 2026; see
+[CHANGELOG.md](CHANGELOG.md)). Install it from the plugin repository: in Jellyfin
+open Dashboard → Plugins → Repositories, add
+`https://raw.githubusercontent.com/Zoraz01/jellyfin-plugin-zorofin/main/manifest.json`,
+then install **Zorofin** from the Catalog and restart Jellyfin. Needs Jellyfin
+12.2 or later. Zorofin
 apps need the `requests` version 2 support planned for the first update after 1.0
 before they use the Requests module.
 
@@ -36,6 +41,8 @@ its maintainer.
 | Extras | Extras tab, one switch per feature | Sonarr/Radarr for Calendar, Downloads and admin links; an MDBList key for ratings; Seerr for watchlist sync | `/Zorofin/Extras/*`, `/Zorofin/Arr/*` |
 | Announcement | Announcement tab | nothing | `GET /Zorofin/Announcement`, `POST /Zorofin/Announcement/Dismiss` |
 | Support inbox | Support tab | nothing | `POST /support/ticket`, `GET /support/notifications`, `POST /support/notifications/{id}/read`; `/Zorofin/Admin/Support/*` (administrators) |
+| Playback problem reports | Support tab, on by default | nothing | `POST /Zorofin/PlaybackReports` (signed-in viewers); `GET`/`DELETE /Zorofin/Admin/PlaybackReports` (administrators) |
+| Notification read state | follows Support inbox, Announcement, the companion's alerts and Requests | nothing | `GET`/`POST /Zorofin/Notifications/Read` |
 | Store-app addresses | follows Announcement, Support and the companion's modules | see below | `GET /support/announcement/me`, `GET /support/recommendations`, `GET`/`POST /support/request-alerts/*`, `GET`/`POST /Zorofin/Alerts/ConfirmEmail` (no sign-in) |
 | Companion bridge | Companion URL and secret | an optional Zorofin companion service | `GET`/`POST /Zorofin/Companion/{module}/*` |
 
@@ -141,7 +148,7 @@ access, parental limits and watch state:
 | 4K / HDR showcase | personal | Movies with a 4K video stream, badged from the streams (4K, Dolby Vision, HDR10, HDR10+, HLG) |
 | Seasonal picks | personal | The same calendar as the apps: holidays, the season, then rotating moods. Matching collections first, then titles whose tags, text or genres fit. Titled after the theme, such as "Spooky season" |
 | Popular this week | personal | Popular this week's ranking. Needs Popular this week |
-| Your teams / starting soon | personal | Live TV sports on now or in the next 12 hours, filtered to the viewer's teams |
+| Your teams / starting soon | personal | The viewer's teams' games on now or starting within the hour, on a channel they can open. Viewers who follow no teams get the server's favorite teams from the companion's Sports module; with neither, the row is hidden |
 | Because you watched … | personal | Up to two rows: titles sharing the most genres with something the viewer finished |
 | Favorites | library | Favorite movies and shows |
 | Recently added movies / shows | library | Newest movies; shows with the newest episodes |
@@ -162,15 +169,21 @@ reduced to what cards show (no paths or media sources):
  "cards":[{"id":"…","subtitle":"New in your library","badges":["New episode"],"item":{"Id":"…","Name":"…","Type":"Episode","ImageTags":{…},"UserData":{…}}}]}]}
 ```
 
-`GET /Zorofin/Home/Rows` answers in the shape of the older
+`GET /Zorofin/Home/Rows[?fresh=true]` answers in the shape of the older
 `/support/home/rows` feed (schema 1, the seven app rows, empty and unavailable rows
 included). The manifest lists `homeRows` as **version 2** because version 1 means
-the `/support/home/rows` path, so today's apps ignore it until an app update
-reads the new path. It also lists `homeSections` version 1.
+the `/support/home/rows` path. Updated clients negotiate that route explicitly;
+older apps continue to ignore v2 until updated. `homeSections` version 1 stays
+separate from this seven-row app contract.
 
-A viewer's Home is built once a minute at most; requests from the same viewer
+A viewer's Home is normally reused for one minute; requests from the same viewer
 share one build, and nothing is shared between viewers. A row that fails is
-left out; the others still show. `?fresh=true` rebuilds after a teams change.
+left out; the others still show. Both endpoints accept `?fresh=true` after teams,
+request or playback changes. This refreshes a completed build older than five
+seconds; a younger or in-flight build is shared. It never bypasses authentication,
+viewer isolation or the twelve-build limit. A change inside that five-second
+window appears on the next bounded refresh (the ordinary cache expires at 60
+seconds); clients must not invent a second preferences endpoint.
 The Home tab can switch off any row (`HomeRowsOff`). An optional dated calendar
 for holidays that move (Ramadan, Eid, Diwali…) uses the
 `curated-calendar.json` format in `HomeCuratedCalendar`.
@@ -211,6 +224,72 @@ the 50 most recent per account) are kept in
 announcement answers `409`. When it is on, the capability manifest lists
 `announcements` version 1; the iOS, Apple TV and TV apps can list the same
 message in their Notifications once they support it.
+
+### Notification read state
+
+So a notification read on one device is not new on the account's others, the
+plugin keeps one read list per account, whichever service sends the notices
+(this plugin, the companion, or a server's own support service). It is listed
+in the manifest as `notificationReads` version 1 whenever `notifications` or
+`requests` is listed.
+
+`GET /Zorofin/Notifications/Read` (any signed-in user):
+
+```json
+{"initialized":true,"requests":[41,57],"replies":["Tq8x2m4k|2026-11-09T20:00:00.000Z"]}
+```
+
+- `requests`: request ids whose "Your request is available" notice was read.
+- `replies`: support replies read, as `ticketId|updatedAt`. A newer reply on
+  the same ticket has a new `updatedAt`, so it is unread again.
+- `initialized`: false until a client has recorded the account's history. The
+  first client to see `false` posts every request that is already ready with
+  `"initialize":true`, so an existing library never arrives as a wall of unread
+  notices. A client can also add what it already marked read on that device.
+
+`POST /Zorofin/Notifications/Read` adds to the list and answers the new state:
+
+```json
+{"requests":[57],"replies":[{"id":"Tq8x2m4k","updatedAt":"2026-11-09T20:00:00.000Z"}],"initialize":false}
+```
+
+Reading is one way; nothing makes a notice unread. At most 500 items per call;
+an invalid id or time answers `400`. The account comes from the Jellyfin
+session, never the body. The newest 2,000 request ids and 500 replies per
+account are kept in `<jellyfin data>/zorofin/notification-reads.json` (user ids,
+request ids and ticket ids only). The older per-ticket
+`POST /support/notifications/{id}/read` still works for today's store apps.
+
+### Playback problem reports
+
+So the owner hears about a title that won't play without a viewer writing in,
+the Zorofin apps (1.5 and later) report playback problems on their own. On by
+default, with a switch on the **Support** tab; while it is on the manifest
+lists `playbackReports` version 1, and apps send nothing unless they see it.
+Each viewer can also turn their own reports off in the app's Settings, and
+that always wins.
+
+`POST /Zorofin/PlaybackReports` (any signed-in user):
+
+```json
+{"kind":"start_failed","itemId":"…","title":"Big Test Movie","platform":"Android TV",
+ "appVersion":"1.5.0","device":"Living Room","method":"transcode",
+ "reason":"Player error 4003","startMs":12000,"positionSeconds":0}
+```
+
+- `kind` (required): `start_failed`, `stopped`, `fallback`, `stalled`,
+  `quality_lowered`, `recovered`, `slow_start` or `app_error`. Anything else
+  answers `400`.
+- `method`: `direct`, `on-device`, `remux`, `transcode` or `live`.
+- Everything else is optional and trimmed to a short length.
+
+It answers `204`, `404` while collection is off, and `429` after 40 reports
+from one viewer in an hour. The viewer and the time come from the Jellyfin
+session and the server clock, never the body. The newest 2,000 reports are kept
+in `<jellyfin data>/zorofin/playback-reports.json`; nothing is sent anywhere
+else. Administrators read them, grouped by title and app, on the Support tab
+(`GET /Zorofin/Admin/PlaybackReports`) and can delete them all
+(`DELETE /Zorofin/Admin/PlaybackReports`).
 
 ### Play history and the Activity page
 
@@ -344,7 +423,7 @@ The plugin is `src/Jellyfin.Plugin.Zorofin/bin/Release/net10.0/Jellyfin.Plugin.Z
 ## Install (manual, for testing)
 
 1. Stop Jellyfin.
-2. Copy the DLL to `<jellyfin config>/plugins/Zorofin_0.1.0.0/`.
+2. Copy the DLL to `<jellyfin config>/plugins/Zorofin_0.2.0.0/`.
 3. Start Jellyfin, then open **Zorofin** in the Dashboard sidebar (also under Dashboard → Plugins).
 4. To switch on Requests: import your Jellyfin users in Seerr, then enter the
    Seerr URL (as Jellyfin reaches it) and its API key.

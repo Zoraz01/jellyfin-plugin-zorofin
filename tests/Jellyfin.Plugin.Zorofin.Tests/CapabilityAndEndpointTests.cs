@@ -9,11 +9,13 @@ namespace Jellyfin.Plugin.Zorofin.Tests;
 public class CapabilityAndEndpointTests
 {
     [Fact]
-    public void FreshInstallAdvertisesNothing()
+    public void FreshInstallAdvertisesOnlyPlaybackReports()
     {
         var manifest = CapabilityManifest.Build(new PluginConfiguration());
         Assert.Equal(1, manifest.SchemaVersion);
-        Assert.Empty(manifest.Features);
+        Assert.Equal(new[] { "playbackReports" }, manifest.Features.Keys);
+        Assert.Equal(new CapabilityFeature(CapabilityManifest.PlaybackReportsVersion, true), manifest.Features["playbackReports"]);
+        Assert.Empty(CapabilityManifest.Build(new PluginConfiguration { PlaybackReportsEnabled = false }).Features);
     }
 
     [Fact]
