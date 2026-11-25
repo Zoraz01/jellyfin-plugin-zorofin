@@ -1,6 +1,8 @@
 name: Release
 
-# Push a tag like v0.2.0.0 (it must match AssemblyVersion in the .csproj).
+# Push a tag like v0.2.0.0 (it must match AssemblyVersion in the .csproj), or
+# run this workflow by hand on main: it then releases the .csproj's version and
+# creates the tag itself.
 # Builds and tests the plugin, publishes a GitHub release with the zip Jellyfin
 # installs, and adds the version to manifest.json on main, which is the plugin
 # repository URL people add in Jellyfin. Notes come from CHANGELOG.md.
@@ -8,6 +10,7 @@ name: Release
 on:
   push:
     tags: ["v*.*.*.*"]
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -31,9 +34,18 @@ jobs:
       - name: Check the tag matches the project version
         id: version
         run: |
-          version="${GITHUB_REF_NAME#v}"
           project=src/Jellyfin.Plugin.Zorofin/Jellyfin.Plugin.Zorofin.csproj
           declared=$(sed -n 's:.*<AssemblyVersion>\(.*\)</AssemblyVersion>.*:\1:p' "$project")
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
+            version="$declared"
+            if git rev-parse -q --verify "refs/tags/v$version" >/dev/null; then
+              echo "::error::v$version is already released; bump AssemblyVersion first"
+              exit 1
+            fi
+          else
+            version="${GITHUB_REF_NAME#v}"
+          fi
+          echo "tag=v$version" >> "$GITHUB_OUTPUT"
           if [ "$version" != "$declared" ]; then
             echo "::error::Tag $GITHUB_REF_NAME does not match AssemblyVersion $declared"
             exit 1
@@ -77,9 +89,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.version.outputs.version }}
           SEMVER: ${{ steps.version.outputs.semver }}
+          TAG: ${{ steps.version.outputs.tag }}
         run: |
-          gh release create "$GITHUB_REF_NAME" "dist/zorofin_${VERSION}.zip" \
-            --title "Zorofin plugin $SEMVER" --notes-file notes.md --verify-tag
+          gh release create "$TAG" "dist/zorofin_${VERSION}.zip" \
+            --title "Zorofin plugin $SEMVER" --notes-file notes.md --target "$GITHUB_SHA"
 
       - name: Commit manifest.json to main
         env:
