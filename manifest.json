@@ -1,0 +1,21 @@
+[
+  {
+    "guid": "e49272bf-d1f8-4d83-8cd4-7b3c7f2a1fce",
+    "name": "Zorofin",
+    "description": "Seerr requests, play history with an Activity page, popular-this-week stats and server announcements.",
+    "overview": "Optional server features for Jellyfin and the Zorofin apps.",
+    "owner": "Zoraz01",
+    "category": "General",
+    "imageUrl": "",
+    "versions": [
+      {
+        "version": "0.2.0.0",
+        "changelog": "First public release, installable from the plugin repository manifest. - Home rows refresh from 1.5: a per-viewer cache so Home opens faster, and rows driven by TMDB and your library. - Sports: the \"Your teams\" row only appears when one of your favorite teams is playing now or within the hour, and its cards carry the matchup and both team crests. - Playback problem reports: the apps can send a report (with the stream and device details) to the Support tab. - Notification read state is kept per account, so reading a notification on one device clears it on the others. - Catch Up: Like or Skip, sharing taste with recommendations. - Plays that end without a matching stop report are still saved to play history. - \"Recommended to request\" titles picked by AI (optional, your own key) and by what viewers actually watch.",
+        "targetAbi": "12.2.0.0",
+        "sourceUrl": "https://github.com/Zoraz01/jellyfin-plugin-zorofin/releases/download/v0.2.0.0/zorofin_0.2.0.0.zip",
+        "checksum": "d7d0a1501748bd2e8e54e91566a18a98",
+        "timestamp": "2026-11-25T02:24:36Z"
+      }
+    ]
+  }
+]
