@@ -79,7 +79,7 @@ def main() -> None:
 
     checksum = hashlib.md5(zip_path.read_bytes()).hexdigest()
     manifest_path: Path = args.manifest
-    source = manifest_path if manifest_path.exists() else TEMPLATE
+    source = manifest_path if manifest_path.exists() and manifest_path.stat().st_size else TEMPLATE
     manifest = json.loads(source.read_text())
     plugin = next((p for p in manifest if p.get("guid") == GUID), None)
     if plugin is None:

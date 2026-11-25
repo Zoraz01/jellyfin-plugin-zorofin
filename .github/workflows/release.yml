@@ -76,7 +76,12 @@ jobs:
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
-          git show origin/main:manifest.json > manifest.json 2>/dev/null || true
+          # Start from the published manifest; the first release starts from the template.
+          if git show origin/main:manifest.json > /tmp/published.json 2>/dev/null; then
+            cp /tmp/published.json manifest.json
+          else
+            rm -f manifest.json
+          fi
           python3 tools/package-zorofin-plugin.py \
             --version "$VERSION" \
             --changelog "$(cat changelog.txt)" \
